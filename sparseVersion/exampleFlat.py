@@ -13,7 +13,7 @@ pmtx = relabelingNeurons(cmtx, perm=permu)
 
 idtyp = 1
 idxprun = 2
-istage = 1#5
+istage = 5
 del_frac = .1
 # isort, esort = sortNeurons(pmtx, idxprun, permu)
 # tmtx = trim_neurons(pmtx, isort, esort)
@@ -34,24 +34,24 @@ norm = BoundaryNorm(boundaries, cmap.N)
 
 plt.close('all')
 fig = plt.figure(figsize=(10,4))
-az = fig.add_subplot(131)
-az.set_title('original', fontsize=13, fontweight='bold')
-cav = az.matshow(cc, cmap = cmap, norm=norm)
+az1 = fig.add_subplot(131)
+az1.set_title('original', fontsize=13, fontweight='bold')
+cav = az1.matshow(cc, cmap = cmap, norm=norm)
 # cbar = plt.colorbar(cav, ticks = [-31.,    0.,  13.,  30.])
 # cbar.set_ticklabels([-60, 0, 20, 30])
 
-az = fig.add_subplot(132)
-az.set_title('relabeled', fontsize=13, fontweight='bold')
-cav = az.matshow(pp, cmap = cmap, norm=norm)
+az2 = fig.add_subplot(132)
+az2.set_title('relabeled', fontsize=13, fontweight='bold')
+cav = az2.matshow(pp, cmap = cmap, norm=norm)
 # cbar = plt.colorbar(cav, ticks = [-31.,    0.,  13.,  30.])
 # cbar.set_ticklabels([-60, 0, 20, 30])
-az = fig.add_subplot(133)
+az3 = fig.add_subplot(133)
 # az.set_title('trimmed', fontsize=13, fontweight='bold')
 # cav = az.matshow(qq, cmap = cmap, norm=norm)
 #
 # az = fig.add_subplot(144)
-az.set_title('trimmed', fontsize=13, fontweight='bold')
-cav = az.matshow(tt, cmap = cmap, norm=norm)
+az3.set_title('trimmed (%d%%)'%(10*istage), fontsize=13, fontweight='bold')
+cav = az3.matshow(tt, cmap = cmap, norm=norm)
 # cbar = plt.colorbar(cav, ticks = [-31.,    0.,  13.,  30.])
 # cbar.set_ticklabels([-60, 0, 20, 30])
 
