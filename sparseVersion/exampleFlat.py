@@ -1,261 +1,147 @@
-import pylab as plt
+import numpy as np
+from scipy.sparse import coo_matrix, load_npz, save_npz
+
+import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
-from funcDegeneration import *   
+from funcDegeneration import *
+from parameters import *
+    
+
+       
+def trim_neurons2(trim_params):
+
+    '''
+    - cp_index is the index to load the corresponding connectivity coo_matrix as well as permuter.
+        - cp_index=0 corresponds to the original data, no relabeling, permuter is also simply a range
+    - idxprun is the type of nodal attack
+    - istage is the stage of attack ... in our scenario, istage*10 percent removal
+
+    output: trimmed connectivity data where neurons are relabeled yet again to put inh neurons at the beginning. This additional ordering step in this algo is necessary when we want to track inh and exc populations separately.
+    '''
+    wmatrix, cp_index, idxprun, istage = trim_params 
+    
+    isort, esort = sortNeurons(cp_index, idxprun)
+
+
+    nidel = int(del_frac * NI) * istage
+    nedel = int(del_frac * NE) * istage
+
+    to_delete = np.concatenate((isort[:nidel],esort[:nedel]))
+    remaining = np.concatenate((isort[nidel:],esort[nedel:]))
+
+    wmatrix = wmatrix.toarray()
+    wmatrix = wmatrix[np.ix_(remaining, remaining)]
+
+    return coo_matrix(wmatrix)
+
+def synapseSorter2(smtx, idxprun):
+    # string_id = str(cp_index).zfill(2)
+    # smtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(dirr, string_id))
+    row_indices, col_indices = smtx.nonzero()
+    if idxprun==0:   # out
+        sorted_indices = np.argsort(col_indices)
+    elif idxprun==1: # in 
+        sorted_indices = np.argsort(row_indices)
+    elif idxprun==2: # rand
+        sorted_indices = np.random.permutation(len(smtx.data))
+    elif idxprun==3: # ord 
+        sorted_indices = np.arange(len(row_indices))
+    elif idxprun==4: # res
+        sorted_indices = np.arange(len(row_indices))[::-1]
+    else:
+        print( 'index of pruning exceeds availability')
+
+    # Re-arrange the row, column indices, and data according to the sorted order
+    sorted_row_indices = row_indices[sorted_indices]
+    sorted_col_indices = col_indices[sorted_indices]
+    sorted_data = smtx.data[sorted_indices]
+
+    # Create new sorted COO matrix
+    # 
+    return coo_matrix((sorted_data, (sorted_row_indices, sorted_col_indices)), shape=(N0,N0))
+    
+
+       
+        
+def trim_synapses2(trim_params):
+    matrix, cp_index, idxprun, istage = trim_params 
+    matrix = synapseSorter2(matrix.copy(), idxprun)
+    
+    ncutt = int(istage*del_frac*len(matrix.data))
+    matrix = coo_matrix((matrix.data[ncutt:], (matrix.row[ncutt:], matrix.col[ncutt:])), shape=matrix.shape)
+    
+    permuter = np.load('%s/node_permutations_3611x10.npy'%dirr)[cp_index]
+    return relabelingNeurons(matrix, perm=permuter.argsort()) 
+    
 
 
 
-np.random.seed(23098)
+        
+def trimming2(idtyp, trim_params):
+    if idtyp:
+        return trim_neurons2(trim_params)
+    else:
+        return trim_synapses2(trim_params)
+    
+        
 
-permu = np.random.permutation(N0)
-# permu = np.arange(N0)
-pmtx = relabelingNeurons(cmtx, perm=permu)
-
-idtyp = 1
-idxprun = 2
-istage = 5
-del_frac = .1
-# isort, esort = sortNeurons(pmtx, idxprun, permu)
-# tmtx = trim_neurons(pmtx, isort, esort)
-
-tmtx = deleteNodeOrLink(pmtx, idtyp, idxprun, istage, permu)
+    
 
 
 
-cc = cmtx.toarray()
-pp = pmtx.toarray()
-tt = tmtx.toarray()
 
 
-
+boundaries = [-610, -10, 10, 250, 350]  # For example: data values in the range [0, 1), [1, 2), ...
 cmap = ListedColormap(['#339BFF', '#ffffff', '#FF3333', '#900C3F'])
-boundaries = [-61, -1, 1, 25, 35]  # For example: data values in the range [0, 1), [1, 2), ...
 norm = BoundaryNorm(boundaries, cmap.N)
 
+
+
+demoTypes = [
+    ['parent relabeled 1', 'synaptic loss 1', 'neuronal loss 1'], 
+    ['parent relabeled 2', 'synaptic loss 2', 'neuronal loss 2'],
+]
+
+
+idxpr = 2 # 2 is for random deletion
+istage = 5 # 5 is for 5*10 percent of the original to delete  
+
+
 plt.close('all')
-fig = plt.figure(figsize=(10,4))
-az1 = fig.add_subplot(131)
-az1.set_title('original', fontsize=13, fontweight='bold')
-cav = az1.matshow(cc, cmap = cmap, norm=norm)
-# cbar = plt.colorbar(cav, ticks = [-31.,    0.,  13.,  30.])
-# cbar.set_ticklabels([-60, 0, 20, 30])
+fig, axes = plt.subplots(2,3, figsize=(12,7)) 
 
-az2 = fig.add_subplot(132)
-az2.set_title('relabeled', fontsize=13, fontweight='bold')
-cav = az2.matshow(pp, cmap = cmap, norm=norm)
-# cbar = plt.colorbar(cav, ticks = [-31.,    0.,  13.,  30.])
-# cbar.set_ticklabels([-60, 0, 20, 30])
-az3 = fig.add_subplot(133)
-# az.set_title('trimmed', fontsize=13, fontweight='bold')
-# cav = az.matshow(qq, cmap = cmap, norm=norm)
-#
-# az = fig.add_subplot(144)
-az3.set_title('trimmed (%d%%)'%(10*istage), fontsize=13, fontweight='bold')
-cav = az3.matshow(tt, cmap = cmap, norm=norm)
-# cbar = plt.colorbar(cav, ticks = [-31.,    0.,  13.,  30.])
-# cbar.set_ticklabels([-60, 0, 20, 30])
-
-
+for idxnet, cp_index in enumerate([1, 4]):    
+    amtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(dirr, str(cp_index).zfill(2)))
+    permx = np.load('%s/node_permutations_3611x10.npy'%dirr)[cp_index]
+    wmtx = weightedFromAdjacency(amtx, NI, permx)
+    # prmmm = np.load('%s/node_permutations_3611x10.npy'%dirr)[cp_index]
+    # pwmtx = relabelingNeurons(wmtx, perm=prmmm.argsort())
+    axes[idxnet, 0].matshow(wmtx.toarray(), cmap = cmap, norm=norm) 
+    for idtyp in range(2):
+        trim_params = [wmtx, cp_index, idxpr, istage] 
+        tmtx = trimming2(idtyp, trim_params)
+        axes[idxnet, idtyp+1].matshow(tmtx.toarray(), cmap = cmap, norm=norm) 
 plt.tight_layout()
 plt.show()
 
-    
-    
 
 
 
-
-    
-# idtyp = 1
-# idxprun = 0
-# istage = 0
-# delfrac = 0.1
+# fig, axes = plt.subplots(2,3, figsize=(12,7))
 #
-#
-# cmtx = ordspmtx.copy()
-# # newmx = deletingNroSyn(cmtx, idtyp, idxprun, istage, frac)
-#
-# for istage in range(10):
-#     newmx = deletingNroSyn(cmtx, idtyp, idxprun, istage, delfrac)
-#     newN = newmx.shape[0]
-#     newNI = NI-int(istage*delfrac*idtyp*NI) #idtyp is just to reduce only during neuroDeath
-#     newNE = NE-int(istage*delfrac*idtyp*NI)
-#     print('')
-#     print(istage)
-#     print('lee', len(newmx.data))
-#     print('size ', newmx.shape[0], ' newNI,newNE:', (newNI, newNE))
-#
-#
-#
-
-
-
-
-
-# deletes edges or nodes at istage and retuns connMatrix 
-# def deletingNroSyn(cmtx, idtyp, istage, esort, isort, frac):
-#     '''
-#     - cmtx is coo_matrix where the edges are sorted according to a desired synorder (in, out, rand, res or ord)
-#     - idtyp is 1 for neuronal death or 0 for synaptic death
-#     - istage is the stage of pruning (normally 10 stages where each stage removes 10% of links or nodes from the network). if istage=0, no pruning; istage =1, 10 percent pruning; istage 2 20 percent pruning
-#     - esort and isort are the sorted order of exc nodes or inh nodes according to a desired node order (iout, ideg, rand, ddeg, dout).
-#     - del_frac is by default 0.1, to cut 10% of the nodes or links in the degeneration process.
-#
-#     The algorithm returns a coo matrix (which is sparse matrix) after the desired degneration
-#     '''
-#
-#     if idtyp:
-#         nidel = int(del_frac * NI) * istage
-#         nedel = int(del_frac * NE) * istage
-#
-#         ### first sort the idels and edels
-#         idel = isort[:nidel]
-#         edel = esort[:nedel]
-#
-#         eidel = np.concatenate((idel,edel))
-#
-#         mtx = np.delete(mtx, eidel, axis=0)
-#         mtx = np.delete(mtx, eidel, axis=1)
-#
-#     else:
-#         # ncutt is the number to be removed
-#         ncutt = istage*ncutt_default
-#         # edgOut = edgIn[ncutt:]
-#         torem = edgIn[:ncutt]
-#         mtx[torem[:,0], torem[:,1]] = 0
-#     return mtx
-#
-#
-#
-
-    
-       
-
-
-
-
-# synPruns = ['ord', 'res', 'in', 'out', 'rand']
-#
-# for iptyp, ptyp in enumerate(synPruns):
-#     pmtx = sortSynDegree(nsprse, inorout= ptyp)
-#     edg = np.column_stack(pmtx.nonzero())
-#     print('')
-#     print(ptyp)
-#     print(edg[:10])
-    
-    
-
-
-# N0     = 98#10000 #<<<<<<<<
-# NI, NE = [ 17, 81]
-# # NX = 311 # external
-#
-# np.random.seed(27879)
-# mtx = np.random.binomial(1, .1, (N0,N0))
-# np.fill_diagonal(mtx, 0)
-# smtx = csr_matrix(mtx)
-# smtx = smtx.tocoo()
-# # scipy.io.savemat('smatrix98.mat', {'smtx': smtx})
-# smtx = scipy.io.loadmat('smatrix98.mat')['smtx'] ## coo matrix
-
-# np.random.seed(27879)
-#
-# N0     = 20#10000 #<<<<<<<<
-# NI, NE = [ 4, 16]
-# # NX = 311 # external
-#
-# mtx = np.random.binomial(1, .1, (N0,N0))
-# np.fill_diagonal(mtx, 0)
-# smtx = csr_matrix(mtx)
-# smtx = smtx.tocoo()
-# sr,tg = smtx.nonzero()
-# smtx = coo_matrix((np.arange(1,len(sr)+1), (sr,tg)), shape=smtx.shape)
-# # scipy.io.savemat('smatrix98.mat', {'smtx': smtx})
-#
-# # src, tgt = smtx.nonzero()
-# permu = np.arange(len(smtx.data))
-# np.random.shuffle(permu)
-# qmtx = permute(smtx.copy(), permu)
-#
-# shuf = reindexingNeurons(smtx)
-#
-# ousort = sortSynDegree(smtx, 'out')
-# insort = sortSynDegree(smtx, 'in')
-# rdsort = sortSynDegree(smtx, 'rand')
-
-
-
-
-
-# #### ordering
-# # def orderingNroSyn(scooMtx, idtyp, idxPrun):
-# idtyp = 1
-#
-# cmtx = smtx.tocoo()
-#
-# if idtyp:
-#     # src, tgt = edgIn.T
-#     # mtx = np.zeros((N0,N0), dtype=int)
-#     # mtx[src,tgt] = 1
-#
-#     # otdg = np.sum(mtx,1) # rows are considered sources
-#     # aldg = np.sum(mtx,0) + np.sum(mtx,1)
-#     otdeg, aldg = degreeFromSparceMatrix(cmtx)
-#     prrm = np.arange(N0)
-#     np.random.shuffle(prrm)
-#
-#     odd = np.column_stack((otdg, aldg, prrm, nrns))
-#     if  idxPrun==0:
-#         sort = odd[:,3][odd[:,0].argsort()]
-#     elif idxPrun==1:
-#         sort = odd[:,3][odd[:,1].argsort()]
-#     elif idxPrun==2:
-#         sort = odd[:,3][odd[:,2].argsort()]
-#     elif idxPrun==3:
-#         sort = odd[:,3][odd[:,1].argsort()]
-#         sort = sort[::-1]
-#     elif idxPrun==4:
-#         sort = odd[:,3][odd[:,0].argsort()]
-#         sort = sort[::-1]
-#     else:
-#         print( 'specify type')
-#         return 0
-#     sort = sort.astype(int)
-#     isort = sort[sort<NI]
-#     esort = sort[sort>=NI]
-#     # # idxE = sort[sort%5!=0]
-#     # # idxI = sort[sort%5==0]
-#     # isort = sort[nrnI0].astype(int)
-#     # esort = sort[nrnE0].astype(int)
-#     edgOut = edgIn.copy()
-# else:
-#     ptyp = synPruns[idxPrun]
-#     if ptyp == 'ord':## ordered
-#         edgOut = edgIn.copy()
-#     elif ptyp == 'res':
-#         edgOut = edgIn[::-1]
-#     elif ptyp == 'out':
-#         src,tgt = edgIn.T
-#         edgOut = edgIn[src.argsort()]
-#     elif ptyp=='in':## out
-#         src,tgt = edgIn.T
-#         edgOut = edgIn[tgt.argsort()]
-#     elif ptyp == 'rnd':## random
-#         prrr = np.arange(len(edgIn))
-#         np.random.shuffle(prrr)
-#         edgOut = edgIn[prrr]
-#
-#     else:
-#         print( 'specify type')
-#         return 0
-#     esort = nrnE0
-#     isort = nrnI0
-# return edgOut, esort, isort
-# #
-
-
-
-
-
-
-
+# for idxnet, cp_index in enumerate([1, 4]):
+#     amtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(dirr, str(cp_index).zfill(2)))
+#     permx = np.load('%s/node_permutations_3611x10.npy'%dirr)[cp_index]
+#     wmtx = weightedFromAdjacency(amtx, NI, permx)
+#     axes[idxnet, 0].matshow(wmtx.toarray(), cmap = cmap, norm=norm)
+#     for idtyp in range(2):
+#         dtparams = [idtyp, cp_index, idxpr, istage]
+#         tmtx0 = trimming(dtparams)
+#         newNI = NI-idtyp*int(del_frac*istage*NI)
+#         newNE = NE-idtyp*int(del_frac*istage*NE)
+#         tmtx = weightedFromAdjacency(tmtx0, newNI, [])
+#         print(newNI+newNE, tmtx.shape[0])
+#         axes[idxnet, idtyp+1].matshow(tmtx.toarray(), cmap = cmap, norm=norm)
+# plt.tight_layout()
+# plt.show()
