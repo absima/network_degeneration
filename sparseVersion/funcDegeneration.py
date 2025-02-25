@@ -54,12 +54,15 @@ def relabelingNeurons(cmtx, perm=[]):
     
 def synapseSorter(cp_index, idxPrun):
     '''
-    - cp_index: the identifier to load the desired permuter and permuted array
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
     - idxPrun: is the index of a neuronal death
     output: the sparse matrix where edges are sorted according to a pruning strategy
     '''
-    string_id = str(cp_index).zfill(2)
-    smtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(dirr, string_id))
+    if type(cp_index)==int:
+        string_id = str(cp_index).zfill(2)
+        smtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
+    elif type(cp_index)==list:
+        smtx = cp_index[0]
     row_indices, col_indices = smtx.nonzero()
     if idxPrun==0:   # out
         sorted_indices = np.argsort(col_indices)
@@ -72,7 +75,7 @@ def synapseSorter(cp_index, idxPrun):
     elif idxPrun==4: # res
         sorted_indices = np.arange(len(row_indices))[::-1]
     else:
-        print( 'index of pruning exceeds availability')
+        raise ValueError(f"Invalid pruning index: {idxPrun}. Please provide a valid value.")
 
     # Re-arrange the row, column indices, and data according to the sorted order
     sorted_row_indices = row_indices[sorted_indices]
@@ -86,15 +89,17 @@ def synapseSorter(cp_index, idxPrun):
        
 def sortNeurons(cp_index, idxPrun):
     '''
-    - cp_index: the identifier to load the desired permuter and permuted array
-    - idxPrun: is the index of a neuronal death
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass.  
+    - idxPrun: is the index of a neuronal death: 
     output: sorted I neurons and E neurons based on a degenerative strategy
     '''
-    string_id = str(cp_index).zfill(2)
-    cmtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(dirr, string_id))
-    permuter = np.arange(cmtx.shape[0])
-    if cp_index: # if we are working with a reindexed version
-        permuter = np.load('%s/node_permutations_3611x10.npy'%dirr)[cp_index]
+    if type(cp_index)==int:
+        string_id = str(cp_index).zfill(2)
+        cmtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
+        permuter = np.load('%s/node_permutations_3611x10.npy'%indir)[cp_index]
+    elif type(cp_index)==list:
+        cmtx, permuter = cp_index
+     
     new_Inrn = permuter[:NI]
     new_Enrn = permuter[NI:]
     
@@ -117,8 +122,7 @@ def sortNeurons(cp_index, idxPrun):
         sort = odd[:,3][odd[:,0].argsort()]
         sort = sort[::-1]
     else:
-        print( 'index of pruning exceeds availability')
-        return 0
+        raise ValueError(f"Invalid pruning index: {idxPrun}. Please provide a valid value.")
     sort = sort.astype(int)
     
     isort = sort[np.isin(sort, new_Inrn)]
@@ -128,16 +132,21 @@ def sortNeurons(cp_index, idxPrun):
 
 def trim_synapses(trim_params):
     '''
-    - cp_index: the identifier to load the desired permuter and permuted array
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
     - idxprun: the type of synaptic degenerative strategy
     - istage: the stage of degeneration 
     output: prunned network with their original labels, INH indices preceding EXC indices 
     '''
     cp_index, idxprun, istage = trim_params
+    
+    if type(cp_index)==int:
+        permuter = np.load('%s/node_permutations_3611x10.npy'%indir)[cp_index]
+    elif type(cp_index)==list:
+        permuter = cp_index[1]
+    
     matrix = synapseSorter(cp_index, idxprun)
     ncutt = int(istage*del_frac*len(matrix.data))
     matrix = coo_matrix((matrix.data[ncutt:], (matrix.row[ncutt:], matrix.col[ncutt:])), shape=matrix.shape)
-    permuter = np.load('%s/node_permutations_3611x10.npy'%dirr)[cp_index]
     
     return relabelingNeurons(matrix, perm=permuter.argsort())
     
@@ -145,14 +154,18 @@ def trim_synapses(trim_params):
 def trim_neurons(trim_params):
     
     ''' 
-    - cp_index is the index to load the corresponding connectivity coo_matrix as well as permuter. 
-        - cp_index=0 corresponds to the original data, no relabeling, permuter is also simply a range
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
     - idxprun is the type of nodal attack
     - istage is the stage of attack ... in our scenario, istage*10 percent removal
     
     output: trimmed connectivity data where neurons are relabeled yet again to put inh neurons at the beginning. This additional ordering step in this algo is necessary when we want to track inh and exc populations separately.  
     '''
     cp_index, idxprun, istage = trim_params
+    if type(cp_index)==int:
+        string_id = str(cp_index).zfill(2)
+        pmtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
+    elif type(cp_index)==list:
+        pmtx = cp_index[0]
     isort, esort = sortNeurons(cp_index, idxprun)
     
     
@@ -162,8 +175,7 @@ def trim_neurons(trim_params):
     to_delete = np.concatenate((isort[:nidel],esort[:nedel]))
     remaining = np.concatenate((isort[nidel:],esort[nedel:])) # we make sure Inh are indexed first in order
     
-    string_id = str(cp_index).zfill(2)
-    pmtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(dirr, string_id))
+    
     pmtx = pmtx.toarray()
     pmtx = pmtx[np.ix_(remaining, remaining)]
     
@@ -174,8 +186,7 @@ def trim_neurons(trim_params):
 def trimming(type_and_trim_params):
     '''
     -- type_and_trim_params has of the form [idtyp, cp_index, idxprun, istage]. 
-    - cp_index is the index to load the corresponding connectivity coo_matrix as well as permuter. 
-        - cp_index=0 corresponds to the original data, no relabeling, permuter is also simply a range
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
     - idxprun is the type of degeneration scheme
     - istage is the stage of pruning (normally 10 stages where each stage removes 10% of links or nodes from the network). if istage=0, no pruning; istage =1, 10 percent pruning; istage 2 20 percent pruning
     output: a coo matrix (which is sparse matrix) after the desired degneration and resorted so that inh nodes have indices less than exc nodes, for easier access.
