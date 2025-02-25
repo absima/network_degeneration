@@ -11,10 +11,18 @@ from parameters import *
 degens = np.arange(nDegen)
 indices = np.arange(nIndex)
 prunes = np.arange(nPrune)
-stages = np.arange(1,nStage)
+
+## parent stage -- preDegeneration
+parents = [0]
+## stages of degeneration
+degenerates = np.arange(1,nStage)
+## some samples to check 
+samples = [7,8,9]
+
+stages = parents
 
 paramList = list(itertools.product(degens, indices, prunes, stages))
-paramList = list(itertools.product([1], [0], [0,2], [7,8,9]))
+
 
 if __name__ == '__main__':
     __spec__ = None
@@ -27,5 +35,4 @@ if __name__ == '__main__':
     
     print('started at: ', start_time)
     print('stopped at: ', finish_time)
-    # print("finished in {} seconds".format(finish_time-start_time))
 
