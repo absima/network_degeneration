@@ -248,6 +248,9 @@ def contribution_to_pairwise_sharing(iparams):
     
 simulation_time = 11. # in s
 start_record_time = 1. # in s
+
+
+### demo: 
 iparams = [1, 0, 2, 7]
 
 # dyn
@@ -260,10 +263,4 @@ weight = np.array([-2.5, -2.5,  0.5,  0.5])
 esw = mean_effective_weight(iparams, weight)
 sh = contribution_to_pairwise_sharing(iparams)
 
-print(rr)
-print(ff)
-print(cv)
-print(dg)
-print(esw)
-print(sh)
 
