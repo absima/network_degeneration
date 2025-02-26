@@ -17,15 +17,14 @@ network_indices = np.arange(nIndex) # indices to load the desired network
 pruning_indices = np.arange(nPrune) # indices for one of the five strategies from the two schemes
 gvalues = np.array([3.,4.,5.,6.,7.]) #the relative strength of inhibition: wINH = -g*wEXC
 
-## parent stage -- preDegeneration
-parents = [0]
-## stages of degeneration
-children = np.arange(1,nStage)
-## some samples to check 
-samples = [8,9]
+
+#parent nets are simulated and alyzed separately to avoid repeated iterations. 
+parents = [0] # parent stage -- preDegeneration
+children = np.arange(1,nStage) # stages of degeneration
+samples = [8,9]# some samples to check 
 
 
-### simulation parameters  
+### starter simulation parameters  
 g_default = 5.
 mije = .5
 wii = -g_default*mije

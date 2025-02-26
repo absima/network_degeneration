@@ -55,17 +55,17 @@ def weightedFromAdjacency(matrix, how_many_Ineurons, weight=[], orderIE=[]):
     if not len(orderIE):
         orderIE = np.arange(matrix.shape[0])
     
-    
     nrnI = orderIE[:how_many_Ineurons]
     nrnE = orderIE[how_many_Ineurons:]
     
-    j_e2e, j_e2i, j_i2i, j_i2e = weight
+    j_i2i, j_i2e, j_e2i, j_e2e = weight
     
     matrix = matrix.toarray()
-    matrix[np.ix_(nrnE, nrnE)] *= j_e2e
-    matrix[np.ix_(nrnI, nrnE)] *= j_e2i
     matrix[np.ix_(nrnI, nrnI)] *= j_i2i
     matrix[np.ix_(nrnE, nrnI)] *= j_i2e
+    matrix[np.ix_(nrnI, nrnE)] *= j_e2i
+    matrix[np.ix_(nrnE, nrnE)] *= j_e2e
+    
     
     return coo_matrix(matrix)
     

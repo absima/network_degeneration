@@ -1,11 +1,18 @@
 import numpy as np
 
 from funcDegeneration import loadData
-from parameters import *
+# from parameters import *
 
+
+#### the functions assume a sorted network where the first block of neurons contains inhibiroty population. 
 
 ## firing rates
 def firing_rate(data):
+    '''
+    - data is a list of spike_data, number of Inhibitory and number of excitatory nodes.
+    
+    output: a list of two lists where the first list contains mean firing rate for (E+I, I, E), while the second contains rate variability of the corresponding population blocks
+    '''
     data, newNI, newNE = data
     network_size = newNI + newNE
     node_ids, spike_times = data.T
@@ -31,10 +38,19 @@ def firing_rate(data):
 
 
 def fano_factor(data, ff_binsize=None):
-    def meanff(spikers):
-        last_spike_time = int(np.ceil(spikers[-1]))
+    '''
+    - data is a list of spike_data, number of Inhibitory and number of excitatory nodes.
+    
+    output: a list of fano-factors for (E+I, I, E)
+    '''
+    def meanff(spktime):
+        '''
+        - spktime is a spike time array
+        output: the fano-factor 
+        '''
+        last_spike_time = int(np.ceil(spktime[-1]))
         bins = np.arange(-0.05, last_spike_time + 0.05, ff_binsize)
-        psth, _ = np.histogram(spikers, bins)
+        psth, _ = np.histogram(spktime, bins)
         mean_psth = np.mean(psth)
         return int(mean_psth != 0) * np.var(psth) / mean_psth
     data, newNI, newNE = data
@@ -52,6 +68,11 @@ def fano_factor(data, ff_binsize=None):
     
     
 def cv_ISI(data):
+    '''
+    - data is a list of spike_data, number of Inhibitory and number of excitatory nodes.
+    
+    output: a list of CV of the inter-spike-intervals of population blocks (E+I, I, E)
+    '''
     data, newNI, newNE = data
     network_size = newNI + newNE
     node_ids, spike_times = data.T
@@ -74,16 +95,17 @@ def cv_ISI(data):
     return [mean_cv_all, mean_cv_inh, mean_cv_exc]
 
 
-simulation_time, start_record_time = [6000., 1000.]
-
-iparams = [1, 0, 2, 7]
-flag = 'spikes'
-
-data = loadData(iparams, flag)
-
-rr = firing_rate(data)
-ff = fano_factor(data, ff_binsize=None)
-cv = cv_ISI(data)
+def degreeFromSparceMatrix(cmtx):
+    '''
+    - coomtx is the sparse coo_matrix as input
+    - it retuns the outdegrees and degrees of the nodes in the network
+    ''' 
+    row_degrees = np.bincount(cmtx.row, minlength=cmtx.shape[0])
+    col_degrees = np.bincount(cmtx.col, minlength=cmtx.shape[1])
+    degrees = row_degrees + col_degrees
+    return col_degrees, degrees
+    
+    
 
 # def structure(mtx, nwE, nwI, g):
 #     N = len(mtx)
@@ -123,6 +145,26 @@ cv = cv_ISI(data)
 #     shE = shh[nwE]/1./N
 #     mnsh = np.mean(shE)
 #     pdens = len(edgeIn)/1./N/N
+
+
+
+# simulation_time, start_record_time = [6000., 1000.]
+simulation_time = 6. # in s
+start_record_time = 1. # in s
+
+iparams = [1, 0, 2, 7]
+flag = 'spikes'
+data = loadData(iparams, flag)
+rr = firing_rate(data)
+ff = fano_factor(data, ff_binsize=None)
+cv = cv_ISI(data)
+
+flag = 'weightedAdjacency'
+data = loadData(iparams, flag)
+
+print('source: ',data[0].col)
+print('target: ',data[0].row)
+print('weight: ',data[0].data)
     
         
 
