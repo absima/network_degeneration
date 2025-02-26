@@ -1,9 +1,8 @@
 import numpy as np
 
+## size of the network blocks
 NI, NE = [ 680, 2931]
 N0 = NI+NE
-
-
 
 indir = '../../nongit/data/pc_data'
 outdir = 'outdata'
@@ -13,20 +12,34 @@ nDegen = 2
 nIndex = 10
 nPrune = 5
 nStage = 10
+degeneration_indices = np.arange(nDegen) # 0 for link removal and 1 for node removal
+network_indices = np.arange(nIndex) # indices to load the desired network
+pruning_indices = np.arange(nPrune) # indices for one of the five strategies from the two schemes
+gvalues = np.array([3.,4.,5.,6.,7.]) #the relative strength of inhibition: wINH = -g*wEXC
+
+## parent stage -- preDegeneration
+parents = [0]
+## stages of degeneration
+children = np.arange(1,nStage)
+## some samples to check 
+samples = [8,9]
 
 
-    
-g = 5.
+### simulation parameters  
+g_default = 5.
 mije = .5
-# wii, wie, wei, wee = [-606, -606, 303, 202]
-wii, wie, wei, wee = [-g*mije, -g*mije, mije, mije]
+wii = -g_default*mije
+wie = -g_default*mije
+wei = mije
+wee = mije
 J_bg = 5.
 p_rate = 15000.
-
-tsec = 6.
-simtime = tsec*1000.
-dt = 0.1
-
 delay = 1.5
 
-start = 1000.
+simulation_time = 11. # in s
+start_record_time = 1. # in s
+dt = 0.1 # time resolution in ms
+
+
+
+

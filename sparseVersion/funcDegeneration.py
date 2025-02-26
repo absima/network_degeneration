@@ -1,7 +1,38 @@
 from scipy.sparse import coo_matrix, load_npz
 from parameters import *
 
-
+def loadData(iparams, flag='indexPerumtedParent', weight=[]):
+    # if type(iparams)==int:
+    if isinstance(iparams, (int, np.integer)):
+        cp_index = iparams
+    elif isinstance(iparams, list) and len(iparams)==4: 
+        idtyp, cp_index, idxprun, istage = iparams
+        newNI = NI-idtyp*int(del_frac*istage*NI)
+        newNE = NE-idtyp*int(del_frac*istage*NE)
+    else:
+        raise ValueError(f"Invalid parameter: {iparams}. Please provide a valid value.")
+         
+    if flag=='indexPerumtedParent':
+        string_id = str(cp_index).zfill(2)
+        smtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
+        permuter = np.load('%s/node_permutations_3611x10.npy'%indir)[cp_index]
+        data = [smtx, permuter]   
+    elif flag=='unweightedAdjacency':
+        data = trimming(iparams)
+        data = [data, newNI, newNE]
+    elif flag=='weightedAdjacency':
+        if not len(weight):
+            weight = np.array([wii, wie, wei, wee])
+        data = trimming(iparams)
+        data = weightedFromAdjacency(data, newNI, weight=weight)
+        data = [data, newNI, newNE]
+    elif flag=='spikes':
+        data = np.load('%s/spikeData_%d_%d_%d_%d.npz'%(outdir, idtyp, cp_index, idxprun, istage))['data']
+        data = [data, newNI, newNE]
+    else:
+        raise ValueError(f"Invalid flag: {flag}. Please provide a valid value.")
+    return data
+    
 def degreeFromSparceMatrix(cmtx):
     '''
     - coomtx is the sparse coo_matrix as input
@@ -12,25 +43,29 @@ def degreeFromSparceMatrix(cmtx):
     degrees = row_degrees + col_degrees
     return col_degrees, degrees
 
-def weightedFromAdjacency(matrix, how_many_Ineurons, orderIE=[]):
+def weightedFromAdjacency(matrix, how_many_Ineurons, weight=[], orderIE=[]):
     '''
     - matrix: a sparse binary matrix for simple adjacency
     - how_many_Ineurons: the number of Inh neurons out of all
     - orderIE: is the list of neurons, where the first how_many_Ineurons are Inh neurons, followed by ExcExc neurons. If it is not provided, Inh neurons are simply range(how_many_neurons). 
     - output: converts the binary connectivity to weighted one, based on synaptic strength.  
     '''
+    if not len(weight):
+        weight = np.array([wii, wie, wei, wee])
     if not len(orderIE):
         orderIE = np.arange(matrix.shape[0])
+    
     
     nrnI = orderIE[:how_many_Ineurons]
     nrnE = orderIE[how_many_Ineurons:]
     
-
+    j_e2e, j_e2i, j_i2i, j_i2e = weight
+    
     matrix = matrix.toarray()
-    matrix[np.ix_(nrnE, nrnE)] *= wee
-    matrix[np.ix_(nrnI, nrnE)] *= wei
-    matrix[np.ix_(nrnI, nrnI)] *= wii
-    matrix[np.ix_(nrnE, nrnI)] *= wie
+    matrix[np.ix_(nrnE, nrnE)] *= j_e2e
+    matrix[np.ix_(nrnI, nrnE)] *= j_e2i
+    matrix[np.ix_(nrnI, nrnI)] *= j_i2i
+    matrix[np.ix_(nrnE, nrnI)] *= j_i2e
     
     return coo_matrix(matrix)
     
@@ -49,20 +84,20 @@ def relabelingNeurons(cmtx, perm=[]):
     return coo_matrix((cmtx.data, (new_row_indices, new_col_indices)), shape=cmtx.shape)
         
 
-    
-
-    
+       
 def synapseSorter(cp_index, idxPrun):
     '''
     - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
     - idxPrun: is the index of a neuronal death
     output: the sparse matrix where edges are sorted according to a pruning strategy
     '''
-    if type(cp_index)==int:
-        string_id = str(cp_index).zfill(2)
-        smtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
-    elif type(cp_index)==list:
+    if isinstance(cp_index, (int, np.integer)):
+        smtx = loadData(cp_index)[0]
+    elif isinstance(cp_index, list):
         smtx = cp_index[0]
+    else:
+        raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
+        
     row_indices, col_indices = smtx.nonzero()
     if idxPrun==0:   # out
         sorted_indices = np.argsort(col_indices)
@@ -93,12 +128,12 @@ def sortNeurons(cp_index, idxPrun):
     - idxPrun: is the index of a neuronal death: 
     output: sorted I neurons and E neurons based on a degenerative strategy
     '''
-    if type(cp_index)==int:
-        string_id = str(cp_index).zfill(2)
-        cmtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
-        permuter = np.load('%s/node_permutations_3611x10.npy'%indir)[cp_index]
-    elif type(cp_index)==list:
+    if isinstance(cp_index, (int, np.integer)):
+        cmtx, permuter = loadData(cp_index)
+    elif isinstance(cp_index, list):
         cmtx, permuter = cp_index
+    else:
+        raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
      
     new_Inrn = permuter[:NI]
     new_Enrn = permuter[NI:]
@@ -139,10 +174,12 @@ def trim_synapses(trim_params):
     '''
     cp_index, idxprun, istage = trim_params
     
-    if type(cp_index)==int:
-        permuter = np.load('%s/node_permutations_3611x10.npy'%indir)[cp_index]
-    elif type(cp_index)==list:
+    if isinstance(cp_index, (int, np.integer)):
+        permuter = loadData(cp_index)[1] 
+    elif isinstance(cp_index, list):
         permuter = cp_index[1]
+    else:
+        raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
     
     matrix = synapseSorter(cp_index, idxprun)
     ncutt = int(istage*del_frac*len(matrix.data))
@@ -161,11 +198,12 @@ def trim_neurons(trim_params):
     output: trimmed connectivity data where neurons are relabeled yet again to put inh neurons at the beginning. This additional ordering step in this algo is necessary when we want to track inh and exc populations separately.  
     '''
     cp_index, idxprun, istage = trim_params
-    if type(cp_index)==int:
-        string_id = str(cp_index).zfill(2)
-        pmtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
-    elif type(cp_index)==list:
+    if isinstance(cp_index, (int, np.integer)):
+        pmtx = loadData(cp_index)[0]
+    elif isinstance(cp_index, list):
         pmtx = cp_index[0]
+    else:
+        raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
     isort, esort = sortNeurons(cp_index, idxprun)
     
     

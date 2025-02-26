@@ -8,21 +8,24 @@ from funcNest import *
 from parameters import *
 
 
-degens = np.arange(nDegen)
-indices = np.arange(nIndex)
-prunes = np.arange(nPrune)
-
 ## parent stage -- preDegeneration
 parents = [0]
 ## stages of degeneration
 degenerates = np.arange(1,nStage)
 ## some samples to check 
-samples = [7,8,9]
 
 stages = parents
+paramList = list(
+    itertools.product(
+        degeneration_indices, 
+        network_indices, 
+        pruning_indices, 
+        stages, 
+        gvalues))
 
-paramList = list(itertools.product(degens, indices, prunes, stages))
-
+## demo -- check
+paramList = list(itertools.product([1],[1],[2],[6,7],[4]))
+##
 
 if __name__ == '__main__':
     __spec__ = None

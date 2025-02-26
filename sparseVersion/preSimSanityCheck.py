@@ -42,7 +42,8 @@ for idx in range(2):
     
     #### weight assignment to sparse matrices
     numNI = [NI, NI, NI, NI-int(del_frac*istage*NI)]
-    lister = [weightedFromAdjacency(lister[i], numNI[i], orderIE=[]) for i in range(len(lister))]
+    weight = [-606, -606, 303, 202]
+    lister = [weightedFromAdjacency(lister[i], numNI[i], weight=weight) for i in range(len(lister))]
     
     #### extracting the weight matrices
     lister = [i.toarray() for i in lister]
