@@ -17,7 +17,7 @@ def spike_data(params):
     
     nest.ResetKernel()
     
-    nest.SetKernelStatus({"resolution": dt, "print_time": True})
+    # nest.SetKernelStatus({"resolution": dt, "print_time": True})
     
     nrnall = nest.Create('iaf_psc_alpha', N)
     nest.Connect(nrnall, nrnall, 'all_to_all', syn_spec={'weight': wmtx.toarray(), 'delay': delay})

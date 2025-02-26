@@ -1,7 +1,7 @@
 from scipy.sparse import coo_matrix, load_npz
 from parameters import *
 
-def loadData(iparams, flag='indexPerumtedParent', weight=[]):
+def loadData(iparams, flag='indexPerumtedParent', weight=None):
     # if type(iparams)==int:
     if isinstance(iparams, (int, np.integer)):
         cp_index = iparams
@@ -21,7 +21,7 @@ def loadData(iparams, flag='indexPerumtedParent', weight=[]):
         data = trimming(iparams)
         data = [data, newNI, newNE]
     elif flag=='weightedAdjacency':
-        if not len(weight):
+        if weight is None:
             weight = np.array([wii, wie, wei, wee])
         data = trimming(iparams)
         data = weightedFromAdjacency(data, newNI, weight=weight)
@@ -43,16 +43,16 @@ def degreeFromSparceMatrix(cmtx):
     degrees = row_degrees + col_degrees
     return col_degrees, degrees
 
-def weightedFromAdjacency(matrix, how_many_Ineurons, weight=[], orderIE=[]):
+def weightedFromAdjacency(matrix, how_many_Ineurons, weight=None, orderIE=None):
     '''
     - matrix: a sparse binary matrix for simple adjacency
     - how_many_Ineurons: the number of Inh neurons out of all
     - orderIE: is the list of neurons, where the first how_many_Ineurons are Inh neurons, followed by ExcExc neurons. If it is not provided, Inh neurons are simply range(how_many_neurons). 
     - output: converts the binary connectivity to weighted one, based on synaptic strength.  
     '''
-    if not len(weight):
+    if weight is None:
         weight = np.array([wii, wie, wei, wee])
-    if not len(orderIE):
+    if orderIE is None:
         orderIE = np.arange(matrix.shape[0])
     
     nrnI = orderIE[:how_many_Ineurons]
@@ -66,16 +66,15 @@ def weightedFromAdjacency(matrix, how_many_Ineurons, weight=[], orderIE=[]):
     matrix[np.ix_(nrnI, nrnE)] *= j_e2i
     matrix[np.ix_(nrnE, nrnE)] *= j_e2e
     
-    
     return coo_matrix(matrix)
     
     
-def relabelingNeurons(cmtx, perm=[]):
+def relabelingNeurons(cmtx, perm=None):
     '''
     relabeling the sparse matrix. 
     i neuron in input matrix is perm[i] neuron in the output matrix, to avoid computational bias.
     '''
-    if not len(perm):
+    if perm is None:
         perm = np.random.permutation(cmtx.shape[0])
     row_indices, col_indices = cmtx.nonzero()
     new_row_indices = perm[row_indices]

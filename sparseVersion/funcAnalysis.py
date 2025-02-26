@@ -7,12 +7,15 @@ from funcDegeneration import loadData
 #### the functions assume a sorted network where the first block of neurons contains inhibiroty population. 
 
 ## firing rates
-def firing_rate(data):
+def firingRate(iparams):
     '''
     - data is a list of spike_data, number of Inhibitory and number of excitatory nodes.
     
     output: a list of two lists where the first list contains mean firing rate for (E+I, I, E), while the second contains rate variability of the corresponding population blocks
     '''
+    
+    data = loadData(iparams, 'spikes')
+    
     data, newNI, newNE = data
     network_size = newNI + newNE
     node_ids, spike_times = data.T
@@ -37,7 +40,7 @@ def firing_rate(data):
 
 
 
-def fano_factor(data, ff_binsize=None):
+def fanoFactor(iparams, ff_binsize=None):
     '''
     - data is a list of spike_data, number of Inhibitory and number of excitatory nodes.
     
@@ -53,6 +56,9 @@ def fano_factor(data, ff_binsize=None):
         psth, _ = np.histogram(spktime, bins)
         mean_psth = np.mean(psth)
         return int(mean_psth != 0) * np.var(psth) / mean_psth
+        
+    data = loadData(iparams, 'spikes')
+    
     data, newNI, newNE = data
     network_size = newNI + newNE
     node_ids, spike_times = data.T
@@ -67,12 +73,15 @@ def fano_factor(data, ff_binsize=None):
     
     
     
-def cv_ISI(data):
+def cvISI(iparams):
     '''
     - data is a list of spike_data, number of Inhibitory and number of excitatory nodes.
     
     output: a list of CV of the inter-spike-intervals of population blocks (E+I, I, E)
     '''
+    
+    data = loadData(iparams, 'spikes')
+    
     data, newNI, newNE = data
     network_size = newNI + newNE
     node_ids, spike_times = data.T
@@ -95,77 +104,166 @@ def cv_ISI(data):
     return [mean_cv_all, mean_cv_inh, mean_cv_exc]
 
 
-def degreeFromSparceMatrix(cmtx):
+def mean_degree(iparams): #<<<--- flag=unweighted to load
     '''
-    - coomtx is the sparse coo_matrix as input
-    - it retuns the outdegrees and degrees of the nodes in the network
+    - data is a list of sparse_data of unweighted adjacency matrix, number of Inhibitory and number of excitatory nodes.
+    
     ''' 
-    row_degrees = np.bincount(cmtx.row, minlength=cmtx.shape[0])
-    col_degrees = np.bincount(cmtx.col, minlength=cmtx.shape[1])
-    degrees = row_degrees + col_degrees
-    return col_degrees, degrees
+    data = loadData(iparams, 'unweightedAdjacency')
     
+    data, newNI, newNE = data 
     
-
-# def structure(mtx, nwE, nwI, g):
-#     N = len(mtx)
-#     emtx = mtx[nwE,:]
-#     imtx = mtx[nwI,:]
-#     indE = np.sum(emtx, 0)# exc in-degree to each neuron
-#     indI = np.sum(imtx, 0)
-#
-#     indI = -g*indI
-#     efdeg = indE+indI#np.concatenate((indE, indI))
-#     mnef = np.mean(efdeg)
-#     sdef = np.std(efdeg)
-#
-#     indeg = np.sum(mtx, 0)
-#     oudeg = np.sum(mtx, 1)
-#     dggg = indeg+oudeg
-#
-#     mndeg = np.mean(dggg)
-#     sddeg = np.std(indeg)
-#
-#     # return [mnef, sdef, mndeg, sddeg]
-#
-#     gg = nx.DiGraph()
-#     gg.add_nodes_from(gnodes)
-#     gg.add_edges_from(edgeIn)
-#
-#     N = len(gg)
-#     mtx = nx.to_numpy_array(gg)
-#     # mtx = np.array(mtx)
-#     gndnx = np.array(gg.nodes())
-#     nwE = np.where(gndnx%5!=0)[0]
-#     nwI = np.where(gndnx%5==0)[0]
-#
-#     outdg = np.array([gg.out_degree(i) for i in gndnx])
-#
-#     shh = outdg*(outdg-1)/2.
-#     shE = shh[nwE]/1./N
-#     mnsh = np.mean(shE)
-#     pdens = len(edgeIn)/1./N/N
-
-
-
-# simulation_time, start_record_time = [6000., 1000.]
-simulation_time = 6. # in s
-start_record_time = 1. # in s
-
-iparams = [1, 0, 2, 7]
-flag = 'spikes'
-data = loadData(iparams, flag)
-rr = firing_rate(data)
-ff = fano_factor(data, ff_binsize=None)
-cv = cv_ISI(data)
-
-flag = 'weightedAdjacency'
-data = loadData(iparams, flag)
-
-print('source: ',data[0].col)
-print('target: ',data[0].row)
-print('weight: ',data[0].data)
+    in_degrees = np.bincount(data.row, minlength=data.shape[0])
+    out_degrees = np.bincount(data.col, minlength=data.shape[1])
+    sum_degrees = in_degrees + out_degrees
     
+    mean_in_degrees = np.mean(in_degrees)
+    mean_out_degrees = np.mean(out_degrees)
+    mean_sum_degrees = np.mean(sum_degrees)
+    
+    mean_in_degrees_I = np.mean(in_degrees[:newNI])
+    mean_out_degrees_I = np.mean(out_degrees[:newNI])
+    mean_sum_degrees_I = np.mean(sum_degrees[:newNI])
+    
+    mean_in_degrees_E = np.mean(in_degrees[newNI:])
+    mean_out_degrees_E = np.mean(out_degrees[newNI:])
+    mean_sum_degrees_E = np.mean(sum_degrees[newNI:])
+    
+    std_in_degrees = np.std(in_degrees)
+    std_out_degrees = np.std(out_degrees)
+    std_sum_degrees = np.std(sum_degrees)
+    
+    std_in_degrees_I = np.std(in_degrees[:newNI])
+    std_out_degrees_I = np.std(out_degrees[:newNI])
+    std_sum_degrees_I = np.std(sum_degrees[:newNI])
+    
+    std_in_degrees_E = np.std(in_degrees[newNI:])
+    std_out_degrees_E = np.std(out_degrees[newNI:])
+    std_sum_degrees_E = np.std(sum_degrees[newNI:])
+    
+    mean_degree_list = [
+        mean_in_degrees, 
+        mean_out_degrees, 
+        mean_sum_degrees, 
+        mean_in_degrees_I, 
+        mean_out_degrees_I, 
+        mean_sum_degrees_I, 
+        mean_in_degrees_E, 
+        mean_out_degrees_E, 
+        mean_sum_degrees_E]
         
+    std_degree_list = [
+        std_in_degrees, 
+        std_out_degrees, 
+        std_sum_degrees, 
+        std_in_degrees_I, 
+        std_out_degrees_I, 
+        std_sum_degrees_I, 
+        std_in_degrees_E, 
+        std_out_degrees_E, 
+        std_sum_degrees_E]
 
+    return mean_degree_list, std_degree_list
+
+def mean_effective_weight(iparams, weight):
+    
+    data = loadData(iparams, 'weightedAdjacency')
+    
+    data, newNI, newNE = data 
+    
+    incoming = np.sum(data.toarray(), 0)
+    outgoing = np.sum(data.toarray(), 1)
+    projecting = incoming+outgoing
+    
+    mean_in_weight = np.mean(incoming)
+    mean_out_weight = np.mean(outgoing)
+    mean_sum_weight = np.mean(projecting)
+    
+    mean_in_weight_I = np.mean(incoming[:newNI])
+    mean_out_weight_I = np.mean(outgoing[:newNI])
+    mean_sum_weight_I = np.mean(projecting[:newNI])
+    
+    mean_in_weight_E = np.mean(incoming[newNI:])
+    mean_out_weight_E = np.mean(outgoing[newNI:])
+    mean_sum_weight_E = np.mean(projecting[newNI:])
+    
+    std_in_weight = np.std(incoming)
+    std_out_weight = np.std(outgoing)
+    std_sum_weight = np.std(projecting)
+    
+    std_in_weight_I = np.std(incoming[:newNI])
+    std_out_weight_I = np.std(outgoing[:newNI])
+    std_sum_weight_I = np.std(projecting[:newNI])
+    
+    std_in_weight_E = np.std(incoming[newNI:])
+    std_out_weight_E = np.std(outgoing[newNI:])
+    std_sum_weight_E = np.std(projecting[newNI:])
+    
+    mean_weight_list = [
+        mean_in_weight, 
+        mean_out_weight, 
+        mean_sum_weight, 
+        mean_in_weight_I, 
+        mean_out_weight_I, 
+        mean_sum_weight_I, 
+        mean_in_weight_E, 
+        mean_out_weight_E, 
+        mean_sum_weight_E]
+        
+    std_weight_list = [
+        std_in_weight, 
+        std_out_weight, 
+        std_sum_weight, 
+        std_in_weight_I, 
+        std_out_weight_I, 
+        std_sum_weight_I, 
+        std_in_weight_E, 
+        std_out_weight_E, 
+        std_sum_weight_E]
+    
+    return [mean_weight_list, std_weight_list]
+
+
+def contribution_to_pairwise_sharing(iparams):
+    
+    data = loadData(iparams, 'unweightedAdjacency')
+    
+    data, newNI, newNE = data
+    newNN = newNI+newNE     
+    out_degrees = np.bincount(data.col, minlength=data.shape[1])
+    
+    sharing_pairs = out_degrees*(out_degrees - 1)/2
+    shared_by_I = sharing_pairs[:newNI]
+    shared_by_E = sharing_pairs[newNI:]
+    
+    mean_shared = np.mean(sharing_pairs)/newNN
+    mean_shared_I = np.mean(shared_by_I)/newNN
+    mean_shared_E = np.mean(shared_by_E)/newNN
+    
+    mean_shared_list = [mean_shared, mean_shared_I, mean_shared_E]
+    
+    return mean_shared_list
+    
+    
+    
+simulation_time = 11. # in s
+start_record_time = 1. # in s
+iparams = [1, 0, 2, 7]
+
+# dyn
+rr = firingRate(iparams)
+ff = fanoFactor(iparams)
+cv = cvISI(iparams)
+# str
+dg = mean_degree(iparams)
+weight = np.array([-2.5, -2.5,  0.5,  0.5])
+esw = mean_effective_weight(iparams, weight)
+sh = contribution_to_pairwise_sharing(iparams)
+
+print(rr)
+print(ff)
+print(cv)
+print(dg)
+print(esw)
+print(sh)
 
