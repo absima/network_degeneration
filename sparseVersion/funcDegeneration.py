@@ -1,38 +1,32 @@
 from scipy.sparse import coo_matrix, load_npz
 from parameters import *
 
-def loadData(iparams, flag='indexPerumtedParent', weight=None):
-    # if type(iparams)==int:
-    if isinstance(iparams, (int, np.integer)):
-        cp_index = iparams
-    elif isinstance(iparams, list) and len(iparams)==4: 
-        idtyp, cp_index, idxprun, istage = iparams
-        newNI = NI-idtyp*int(del_frac*istage*NI)
-        newNE = NE-idtyp*int(del_frac*istage*NE)
-    else:
-        raise ValueError(f"Invalid parameter: {iparams}. Please provide a valid value.")
-         
-    if flag=='indexPerumtedParent':
-        string_id = str(cp_index).zfill(2)
-        smtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
-        permuter = np.load('%s/node_permutations_3611x10.npy'%indir)[cp_index]
-        data = [smtx, permuter]   
-    elif flag=='unweightedAdjacency':
-        data = trimming(iparams)
-        data = [data, newNI, newNE]
-    elif flag=='weightedAdjacency':
-        if weight is None:
-            weight = np.array([wii, wie, wei, wee])
-        data = trimming(iparams)
-        data = weightedFromAdjacency(data, newNI, weight=weight)
-        data = [data, newNI, newNE]
-    elif flag=='spikes':
-        data = np.load('%s/spikeData_%d_%d_%d_%d.npz'%(outdir, idtyp, cp_index, idxprun, istage))['data']
-        data = [data, newNI, newNE]
-    else:
-        raise ValueError(f"Invalid flag: {flag}. Please provide a valid value.")
+
+from scipy.sparse import coo_matrix, load_npz
+from parameters import *
+
+def loadParentAndPermuter(netname, index, ndir=None, pdir=None):
+    if ndir is None:
+        ndir = netdir
+    if pdir is None:
+        pdir = permdir
+    if netname=='emp':
+        netstring = 'relabeld_and_ordered'
+    elif netname in ['er', 'sw', 'sf']:
+        netstring = 'doubleRelabeled_ordered'    
+    smtx = load_npz('%s/%s_%d_%s.npz'%(ndir, netname, index, netstring))
+    permuter = np.load('%s/node_permutations_3611x10.npy'%pdir)[index]
+    data = [smtx, permuter]
     return data
     
+def loadSpikeData(iparams):
+    netname, idtyp, cp_index, idxprun, istage, g = iparams
+    newNI = NI-idtyp*int(del_frac*istage*NI)
+    newNE = NE-idtyp*int(del_frac*istage*NE)
+    data = np.load('%s/spikeData_%s_%d_%d_%d_%d.npz'%(spkdir, netname, idtyp, cp_index, idxprun, istage, int(g)))['data']
+    return [data, newNI, newNE]
+
+       
 def degreeFromSparceMatrix(cmtx):
     '''
     - coomtx is the sparse coo_matrix as input
@@ -84,32 +78,33 @@ def relabelingNeurons(cmtx, perm=None):
         
 
        
-def synapseSorter(cp_index, idxPrun):
+def synapseSorter(synparams):
     '''
-    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permuted_array, permuter] is the list form to pass. 
     - idxPrun: is the index of a neuronal death
     output: the sparse matrix where edges are sorted according to a pruning strategy
     '''
+    netfldr, prmflder, netname, cp_index, idxprun = synparams
     if isinstance(cp_index, (int, np.integer)):
-        smtx = loadData(cp_index)[0]
+        smtx = loadParentAndPermuter(netname, cp_index, netfldr, prmflder)[0]
     elif isinstance(cp_index, list):
         smtx = cp_index[0]
     else:
         raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
         
     row_indices, col_indices = smtx.nonzero()
-    if idxPrun==0:   # out
+    if idxprun==0:   # out
         sorted_indices = np.argsort(col_indices)
-    elif idxPrun==1: # in 
+    elif idxprun==1: # in 
         sorted_indices = np.argsort(row_indices)
-    elif idxPrun==2: # rand
+    elif idxprun==2: # rand
         sorted_indices = np.random.permutation(len(smtx.data))
-    elif idxPrun==3: # ord 
+    elif idxprun==3: # ord 
         sorted_indices = np.arange(len(row_indices))
-    elif idxPrun==4: # res
+    elif idxprun==4: # res
         sorted_indices = np.arange(len(row_indices))[::-1]
     else:
-        raise ValueError(f"Invalid pruning index: {idxPrun}. Please provide a valid value.")
+        raise ValueError(f"Invalid pruning index: {idxprun}. Please provide a valid value.")
 
     # Re-arrange the row, column indices, and data according to the sorted order
     sorted_row_indices = row_indices[sorted_indices]
@@ -121,14 +116,16 @@ def synapseSorter(cp_index, idxPrun):
     return coo_matrix((sorted_data, (sorted_row_indices, sorted_col_indices)), shape=(N0,N0))
     
        
-def sortNeurons(cp_index, idxPrun):
+def sortNeurons(nroparams):
     '''
-    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass.  
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permuted_array, permuter] is the list form to pass.  
     - idxPrun: is the index of a neuronal death: 
     output: sorted I neurons and E neurons based on a degenerative strategy
     '''
+    netfldr, prmflder, netname, cp_index, idxprun = nroparams
+    
     if isinstance(cp_index, (int, np.integer)):
-        cmtx, permuter = loadData(cp_index)
+        cmtx, permuter = loadParentAndPermuter(netname, cp_index, netfldr, prmflder)
     elif isinstance(cp_index, list):
         cmtx, permuter = cp_index
     else:
@@ -143,20 +140,20 @@ def sortNeurons(cp_index, idxPrun):
     np.random.shuffle(prrm)
     
     odd = np.column_stack((outdegree, degree, prrm, np.arange(N0)))    
-    if  idxPrun==0:  #iout 
+    if  idxprun==0:  #iout 
         sort = odd[:,3][odd[:,0].argsort()]
-    elif idxPrun==1: #ideg
+    elif idxprun==1: #ideg
         sort = odd[:,3][odd[:,1].argsort()]
-    elif idxPrun==2: # random
+    elif idxprun==2: # random
         sort = odd[:,3][odd[:,2].argsort()]
-    elif idxPrun==3: # ddeg
+    elif idxprun==3: # ddeg
         sort = odd[:,3][odd[:,1].argsort()]
         sort = sort[::-1]
-    elif idxPrun==4: # dout
+    elif idxprun==4: # dout
         sort = odd[:,3][odd[:,0].argsort()]
         sort = sort[::-1]
     else:
-        raise ValueError(f"Invalid pruning index: {idxPrun}. Please provide a valid value.")
+        raise ValueError(f"Invalid pruning index: {idxprun}. Please provide a valid value.")
     sort = sort.astype(int)
     
     isort = sort[np.isin(sort, new_Inrn)]
@@ -166,21 +163,20 @@ def sortNeurons(cp_index, idxPrun):
 
 def trim_synapses(trim_params):
     '''
-    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permuted_array, permuter] is the list form to pass. 
     - idxprun: the type of synaptic degenerative strategy
     - istage: the stage of degeneration 
     output: prunned network with their original labels, INH indices preceding EXC indices 
     '''
-    cp_index, idxprun, istage = trim_params
-    
+    netfldr, prmflder, netname, cp_index, idxprun, istage = trim_params
     if isinstance(cp_index, (int, np.integer)):
-        permuter = loadData(cp_index)[1] 
+        permuter = loadParentAndPermuter(netname, cp_index, netfldr, prmflder)[1] 
     elif isinstance(cp_index, list):
         permuter = cp_index[1]
     else:
         raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
     
-    matrix = synapseSorter(cp_index, idxprun)
+    matrix = synapseSorter(trim_params[:-1])
     ncutt = int(istage*del_frac*len(matrix.data))
     matrix = coo_matrix((matrix.data[ncutt:], (matrix.row[ncutt:], matrix.col[ncutt:])), shape=matrix.shape)
     
@@ -190,20 +186,20 @@ def trim_synapses(trim_params):
 def trim_neurons(trim_params):
     
     ''' 
-    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permuted_array, permuter] is the list form to pass. 
     - idxprun is the type of nodal attack
     - istage is the stage of attack ... in our scenario, istage*10 percent removal
     
     output: trimmed connectivity data where neurons are relabeled yet again to put inh neurons at the beginning. This additional ordering step in this algo is necessary when we want to track inh and exc populations separately.  
     '''
-    cp_index, idxprun, istage = trim_params
+    netfldr, prmflder, netname, cp_index, idxprun, istage = trim_params
     if isinstance(cp_index, (int, np.integer)):
-        pmtx = loadData(cp_index)[0]
+        pmtx = loadParentAndPermuter(netname, cp_index, netfldr, prmflder)[0]
     elif isinstance(cp_index, list):
         pmtx = cp_index[0]
     else:
         raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
-    isort, esort = sortNeurons(cp_index, idxprun)
+    isort, esort = sortNeurons(trim_params[:-1])
     
     
     nidel = int(del_frac * NI) * istage
@@ -220,16 +216,18 @@ def trim_neurons(trim_params):
     
         
     
-def trimming(type_and_trim_params):
+def trimming(params):
     '''
     -- type_and_trim_params has of the form [idtyp, cp_index, idxprun, istage]. 
-    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permted_array, permuter] is the list form to pass. 
+    - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permuted_array, permuter] is the list form to pass. 
     - idxprun is the type of degeneration scheme
     - istage is the stage of pruning (normally 10 stages where each stage removes 10% of links or nodes from the network). if istage=0, no pruning; istage =1, 10 percent pruning; istage 2 20 percent pruning
     output: a coo matrix (which is sparse matrix) after the desired degneration and resorted so that inh nodes have indices less than exc nodes, for easier access.
     '''  
-    trim_params = type_and_trim_params[1:]
-    idtyp = type_and_trim_params[0]
+    netfldr, prmflder, netname, idtyp, cp_index, idxprun, istage = params
+    
+    trim_params = params[:3]+params[4:]
+    
     if idtyp:
         return trim_neurons(trim_params)
     else:
@@ -272,6 +270,56 @@ def trimming(type_and_trim_params):
 
 
 
+# def trimmedNet(iparams, flag=None):
+#     idtyp, cp_index, idxprun, istage = iparams
+#     newNI = NI-idtyp*int(del_frac*istage*NI)
+#     newNE = NE-idtyp*int(del_frac*istage*NE)
+#
+#     if flag=='unweightedAdjacency':
+#         data = trimming(iparams)
+#         data = [data, newNI, newNE]
+#     elif flag=='weightedAdjacency':
+#         if weight is None:
+#             weight = np.array([wii, wie, wei, wee])
+#         data = trimming(iparams)
+#         data = weightedFromAdjacency(data, newNI, weight=weight)
+#         data = [data, newNI, newNE]
+#     else:
+#         raise ValueError(f"Invalid flag: {flag}. Please provide a valid value.")
+#
+#     return data
+    
+# def loadData(iparams, flag='indexPerumtedParent', weight=None):
+#     # if type(iparams)==int:
+#     if isinstance(iparams, (int, np.integer)):
+#         cp_index = iparams
+#     elif isinstance(iparams, list) and len(iparams)==4:
+#         idtyp, cp_index, idxprun, istage = iparams
+#         newNI = NI-idtyp*int(del_frac*istage*NI)
+#         newNE = NE-idtyp*int(del_frac*istage*NE)
+#     else:
+#         raise ValueError(f"Invalid parameter: {iparams}. Please provide a valid value.")
+#
+#     if flag=='indexPerumtedParent':
+#         string_id = str(cp_index).zfill(2)
+#         smtx = load_npz('%s/sparse_relabeld_and_ordered_%s.npz'%(indir, string_id))
+#         permuter = np.load('%s/node_permutations_3611x10.npy'%indir)[cp_index]
+#         data = [smtx, permuter]
+#     elif flag=='unweightedAdjacency':
+#         data = trimming(iparams)
+#         data = [data, newNI, newNE]
+#     elif flag=='weightedAdjacency':
+#         if weight is None:
+#             weight = np.array([wii, wie, wei, wee])
+#         data = trimming(iparams)
+#         data = weightedFromAdjacency(data, newNI, weight=weight)
+#         data = [data, newNI, newNE]
+#     elif flag=='spikes':
+#         data = np.load('%s/spikeData_%d_%d_%d_%d.npz'%(outdir, idtyp, cp_index, idxprun, istage))['data']
+#         data = [data, newNI, newNE]
+#     else:
+#         raise ValueError(f"Invalid flag: {flag}. Please provide a valid value.")
+#    return data
 
 
 

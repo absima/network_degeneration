@@ -244,7 +244,8 @@ def contribution_to_pairwise_sharing(iparams):
     
     return mean_shared_list
     
-    
+def symmetricity(data):
+    return     
     
 simulation_time = 11. # in s
 start_record_time = 1. # in s
