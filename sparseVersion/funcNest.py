@@ -5,9 +5,11 @@ from funcDegeneration import *
 from parameters import *
 
 
-def spike_data(params):
-    idtyp, cp_index, idxprune, istage, gvalue = params
-    wmtx = trimming(params[:4])
+def simulateAndStore(params):
+    # idtyp, cp_index, idxprune, istage, gvalue = params  
+    netfldr, prmflder, netname, idtyp, cp_index, idxprun, istage, gvalue = params
+    
+    wmtx = trimming(params[:-1])
     newNI = NI-idtyp*int(del_frac*istage*NI)
     
     weight = [-gvalue*mije, -gvalue*mije, mije, mije]
@@ -17,7 +19,7 @@ def spike_data(params):
     
     nest.ResetKernel()
     
-    # nest.SetKernelStatus({"resolution": dt, "print_time": True})
+    nest.SetKernelStatus({"print_time": True})
     
     nrnall = nest.Create('iaf_psc_alpha', N)
     nest.Connect(nrnall, nrnall, 'all_to_all', syn_spec={'weight': wmtx.toarray(), 'delay': delay})
@@ -43,7 +45,7 @@ def spike_data(params):
     data[:,1] = data[:,1]-ms_recstart
     data[:,0] = data[:,0] - 1 ##### index from 0
     
-    np.savez_compressed('%s/spikeData_%d_%d_%d_%d_%d.npz'%(outdir, idtyp, cp_index, idxprune, istage, int(gvalue)), data=data)
+    np.savez_compressed('%s/spikeData_%s_%d_%d_%d_%d_%d.npz'%(outdir, netname, idtyp, cp_index, idxprun, istage, int(gvalue)), data=data)
     
     return 
     

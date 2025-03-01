@@ -6,6 +6,14 @@ from scipy.sparse import coo_matrix, load_npz
 from parameters import *
 
 def loadParentAndPermuter(netname, index, ndir=None, pdir=None):
+    '''
+    - netname: name category of a network (eg. er, sw)
+    - index: the realization/trial index
+    - ndir: the directory of stored parent networks 
+    - pdir: the directory of stored array of ,currently10 permutations (size=10xN)
+    
+    output: returns the sparse matrix and the corresponding permuter
+    '''
     if ndir is None:
         ndir = netdir
     if pdir is None:
@@ -20,6 +28,12 @@ def loadParentAndPermuter(netname, index, ndir=None, pdir=None):
     return data
     
 def loadSpikeData(iparams):
+    '''
+    - netname: name category of a network (eg. er, sw)
+    - cp_index: the realization/trial index
+    
+    output: returns the sparse matrix and the corresponding permuter
+    '''
     netname, idtyp, cp_index, idxprun, istage, g = iparams
     newNI = NI-idtyp*int(del_frac*istage*NI)
     newNE = NE-idtyp*int(del_frac*istage*NE)
@@ -218,7 +232,13 @@ def trim_neurons(trim_params):
     
 def trimming(params):
     '''
-    -- type_and_trim_params has of the form [idtyp, cp_index, idxprun, istage]. 
+    -- params has the form 
+        [netfldr, prmflder, netname, idtyp, cp_index, idxprun, istage] 
+    
+    - netfldr: the directory of stored parent networks 
+    - prmflder: the directory of stored array of ,currently10 permutations (size=10xN)  
+    - netname: name category of a network (eg. er, sw)
+    - idtyp: is degeneration type as in 0=synaptic and 1=neuronal
     - cp_index: it can be an integer index or a list. index case is used to load data when we have saved permuted arrays with the permuters. list case is when we permute the arry online with a permuter and in which case [permuted_array, permuter] is the list form to pass. 
     - idxprun is the type of degeneration scheme
     - istage is the stage of pruning (normally 10 stages where each stage removes 10% of links or nodes from the network). if istage=0, no pruning; istage =1, 10 percent pruning; istage 2 20 percent pruning
