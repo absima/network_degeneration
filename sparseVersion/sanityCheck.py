@@ -94,66 +94,66 @@ plt.close('all')
 
 # ################## -1- ##################
 # ########## preSimulation ##########
-# #### loading the relabeled and perm and restoring the actual ... followed by trimming
-# fig, axes = plt.subplots(4,4, figsize=(8,7.5))
-#
-# for icat in range(2):
-#     nets = netnames[icat]
-#     for inet, netname in enumerate(nets):
-#         print(netname)
-#         mfld = mfolds[icat]
-#         ndir = pfold+mfld+netfold
-#         pdir = pfold+mfld+permfold
-#
-#         rmtx, perm = loadParentAndPermuter(netname, index, ndir, pdir)
-#         wrmtx = weightedFromAdjacency(rmtx, NI, weight=wgt_array)
-#
-#         omtx = relabelingNeurons(rmtx, perm.argsort())
-#         if icat:
-#             omtx = relabelingNeurons(omtx, perm.argsort())
-#
-#         womtx = weightedFromAdjacency(omtx, NI, weight=wgt_array)
-#
-#         icol = inet+icat
-#         ax = axes[0, icol]
-#         # ax.matshow(womtx.toarray(), cmap=cmap, norm=norm)
-#         plotmat(ax, womtx.toarray(), icol, 0, colnames[icol], rownames[0])
-#         ax = axes[1, icol]
-#         plotmat(ax, wrmtx.toarray(), icol, 1, colnames[icol], rownames[1])
-#
-#         # ax.matshow(wrmtx.toarray(), cmap=cmap, norm=norm)
-#         # ax.locator_params(axis='x', nbins=4)
-#         for idtp, dtp in enumerate(['syn', 'neuro']):
-#             params = [ndir, pdir, netname, idtp, index, 2, 5, ]
-#             tmtx = trimming(params)
-#             newNI = NI-int(idtp*del_frac*istage*NI)
-#             wtmtx = weightedFromAdjacency(tmtx, newNI, weight=wgt_array)
-#
-#             ax = axes[idtp+2, icol]
-#             plotmat(ax, wtmtx.toarray(), icol, idtp+2, colnames[icol], rownames[idtp+2])
-#             # ax.matshow(wtmtx.toarray(), cmap=cmap, norm=norm)
-#             # ax.locator_params(axis='x', nbins=4)
-#             #
-# plt.suptitle('Network Categories', fontweight='bold', fontsize=16)
-# # cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])
-# # fig.colorbar(axes[0, 0].images[0], cax=cbar_ax)
-# cbar_ax = fig.add_axes([0.1, 0.05, 0.742, 0.03])  # [left, bottom, width, height]
-# cbar = fig.colorbar(axes[3, 0].images[0], cax=cbar_ax, orientation='horizontal')
-#
-# tix = (boundaries[:-1]+boundaries[1:])/2.
-# cbar.set_ticks(tix)  # Set the tick positions
-# cbar.set_ticklabels([
-#     r'$w_{ie}=%.1f$'%wie,
-#     r'$w_{ii}=%.1f$'%wii,
-#     r'$0.0$',
-#     r'$w_{ee}=%.1f$'%wee,
-#     r'$w_{ei}=%.1f$'%wei], fontweight='bold')
-#
-# plt.tight_layout()
-# plt.show()
-#
-# plt.savefig('orig_relabeled_synprun_neuroprun')
-# plt.savefig('orig_relabeled_synprun_neuroprun.pdf')
+#### loading the relabeled and perm and restoring the actual ... followed by trimming
+fig, axes = plt.subplots(4,4, figsize=(8,7.5))
+
+for icat in range(2):
+    nets = netnames[icat]
+    for inet, netname in enumerate(nets):
+        print(netname)
+        mfld = mfolds[icat]
+        ndir = pfold+mfld+netfold
+        pdir = pfold+mfld+permfold
+
+        rmtx, perm = loadParentAndPermuter(netname, index, ndir, pdir)
+        wrmtx = weightedFromAdjacency(rmtx, NI, weight=wgt_array)
+
+        omtx = relabelingNeurons(rmtx, perm.argsort())
+        if icat:
+            omtx = relabelingNeurons(omtx, perm.argsort())
+
+        womtx = weightedFromAdjacency(omtx, NI, weight=wgt_array)
+
+        icol = inet+icat
+        ax = axes[0, icol]
+        # ax.matshow(womtx.toarray(), cmap=cmap, norm=norm)
+        plotmat(ax, womtx.toarray(), icol, 0, colnames[icol], rownames[0])
+        ax = axes[1, icol]
+        plotmat(ax, wrmtx.toarray(), icol, 1, colnames[icol], rownames[1])
+
+        # ax.matshow(wrmtx.toarray(), cmap=cmap, norm=norm)
+        # ax.locator_params(axis='x', nbins=4)
+        for idtp, dtp in enumerate(['syn', 'neuro']):
+            params = [ndir, pdir, netname, idtp, index, 2, 5, ]
+            tmtx = trimming(params)
+            newNI = NI-int(idtp*del_frac*istage*NI)
+            wtmtx = weightedFromAdjacency(tmtx, newNI, weight=wgt_array)
+
+            ax = axes[idtp+2, icol]
+            plotmat(ax, wtmtx.toarray(), icol, idtp+2, colnames[icol], rownames[idtp+2])
+            # ax.matshow(wtmtx.toarray(), cmap=cmap, norm=norm)
+            # ax.locator_params(axis='x', nbins=4)
+            #
+plt.suptitle('Network Categories', fontweight='bold', fontsize=16)
+# cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])
+# fig.colorbar(axes[0, 0].images[0], cax=cbar_ax)
+cbar_ax = fig.add_axes([0.1, 0.05, 0.742, 0.03])  # [left, bottom, width, height]
+cbar = fig.colorbar(axes[3, 0].images[0], cax=cbar_ax, orientation='horizontal')
+
+tix = (boundaries[:-1]+boundaries[1:])/2.
+cbar.set_ticks(tix)  # Set the tick positions
+cbar.set_ticklabels([
+    r'$w_{ie}$',
+    r'$w_{ii}$',
+    r'$0.0$',
+    r'$w_{ee}$',
+    r'$w_{ei}$'], fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+plt.savefig('orig_relabeled_synprun_neuroprun')
+plt.savefig('orig_relabeled_synprun_neuroprun.pdf')
 
 
 
