@@ -35,7 +35,7 @@ J_bg = 5.
 p_rate = 15000.
 delay = 1.5
 
-simulation_time = 2. #11. # in s
+simulation_time = 11. #11. # in s
 start_record_time = 1. # in s
 dt = 0.1 # time resolution in ms
 

@@ -34,10 +34,10 @@ def loadSpikeData(iparams):
     
     output: returns the sparse matrix and the corresponding permuter
     '''
-    netname, idtyp, cp_index, idxprun, istage, g = iparams
+    spkdir, netname, idtyp, cp_index, idxprun, istage, g = iparams
     newNI = NI-idtyp*int(del_frac*istage*NI)
     newNE = NE-idtyp*int(del_frac*istage*NE)
-    data = np.load('%s/spikeData_%s_%d_%d_%d_%d.npz'%(spkdir, netname, idtyp, cp_index, idxprun, istage, int(g)))['data']
+    data = np.load('%s/spikeData_%s_%d_%d_%d_%d_%d.npz'%(spkdir, netname, idtyp, cp_index, idxprun, istage, int(g)))['data']
     return [data, newNI, newNE]
 
        
