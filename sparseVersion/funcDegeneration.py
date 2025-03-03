@@ -14,10 +14,14 @@ def loadParentAndPermuter(netname, index, ndir=None, pdir=None):
     
     output: returns the sparse matrix and the corresponding permuter
     '''
+    mfold = mfolds[netname in ['er', 'sw', 'sf']] 
+    netfldr = pfold+mfold+netfold
+    prmfldr = pfold+mfold+permfold
+    
     if ndir is None:
-        ndir = netdir
+        ndir = netfldr
     if pdir is None:
-        pdir = permdir
+        pdir = prmfldr
     if netname=='emp':
         netstring = 'relabeld_and_ordered'
     elif netname in ['er', 'sw', 'sf']:
@@ -34,7 +38,10 @@ def loadSpikeData(iparams):
     
     output: returns the sparse matrix and the corresponding permuter
     '''
-    spkdir, netname, idtyp, cp_index, idxprun, istage, g = iparams
+    netname, idtyp, cp_index, idxprun, istage, g = iparams
+    mfold = mfolds[netname in ['er', 'sw', 'sf']] 
+    spkdir = pfold+mfold+spkfold
+    
     newNI = NI-idtyp*int(del_frac*istage*NI)
     newNE = NE-idtyp*int(del_frac*istage*NE)
     data = np.load('%s/spikeData_%s_%d_%d_%d_%d_%d.npz'%(spkdir, netname, idtyp, cp_index, idxprun, istage, int(g)))['data']
@@ -98,14 +105,15 @@ def synapseSorter(synparams):
     - idxPrun: is the index of a neuronal death
     output: the sparse matrix where edges are sorted according to a pruning strategy
     '''
-    netfldr, prmflder, netname, cp_index, idxprun = synparams
+    netname, cp_index, idxprun, istage = synparams
     if isinstance(cp_index, (int, np.integer)):
-        smtx = loadParentAndPermuter(netname, cp_index, netfldr, prmflder)[0]
+        smtx = loadParentAndPermuter(netname, cp_index)[0]
     elif isinstance(cp_index, list):
         smtx = cp_index[0]
     else:
         raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
-        
+    if istage==0:
+        return smtx
     row_indices, col_indices = smtx.nonzero()
     if idxprun==0:   # out
         sorted_indices = np.argsort(col_indices)
@@ -136,18 +144,21 @@ def sortNeurons(nroparams):
     - idxPrun: is the index of a neuronal death: 
     output: sorted I neurons and E neurons based on a degenerative strategy
     '''
-    netfldr, prmflder, netname, cp_index, idxprun = nroparams
+    netname, cp_index, idxprun, istage = nroparams
     
     if isinstance(cp_index, (int, np.integer)):
-        cmtx, permuter = loadParentAndPermuter(netname, cp_index, netfldr, prmflder)
+        cmtx, permuter = loadParentAndPermuter(netname, cp_index)
     elif isinstance(cp_index, list):
         cmtx, permuter = cp_index
     else:
         raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
-     
+        
     new_Inrn = permuter[:NI]
     new_Enrn = permuter[NI:]
     
+    if istage==0:# no pruning
+        return new_Inrn, new_Enrn
+        
     outdegree, degree = degreeFromSparceMatrix(cmtx)
     
     prrm = np.arange(N0) # for random nodal attack
@@ -182,15 +193,15 @@ def trim_synapses(trim_params):
     - istage: the stage of degeneration 
     output: prunned network with their original labels, INH indices preceding EXC indices 
     '''
-    netfldr, prmflder, netname, cp_index, idxprun, istage = trim_params
+    netname, cp_index, idxprun, istage = trim_params
     if isinstance(cp_index, (int, np.integer)):
-        permuter = loadParentAndPermuter(netname, cp_index, netfldr, prmflder)[1] 
+        permuter = loadParentAndPermuter(netname, cp_index)[1] 
     elif isinstance(cp_index, list):
         permuter = cp_index[1]
     else:
         raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
     
-    matrix = synapseSorter(trim_params[:-1])
+    matrix = synapseSorter(trim_params)
     ncutt = int(istage*del_frac*len(matrix.data))
     matrix = coo_matrix((matrix.data[ncutt:], (matrix.row[ncutt:], matrix.col[ncutt:])), shape=matrix.shape)
     
@@ -206,14 +217,14 @@ def trim_neurons(trim_params):
     
     output: trimmed connectivity data where neurons are relabeled yet again to put inh neurons at the beginning. This additional ordering step in this algo is necessary when we want to track inh and exc populations separately.  
     '''
-    netfldr, prmflder, netname, cp_index, idxprun, istage = trim_params
+    netname, cp_index, idxprun, istage = trim_params
     if isinstance(cp_index, (int, np.integer)):
-        pmtx = loadParentAndPermuter(netname, cp_index, netfldr, prmflder)[0]
+        pmtx = loadParentAndPermuter(netname, cp_index)[0]
     elif isinstance(cp_index, list):
         pmtx = cp_index[0]
     else:
         raise ValueError(f"Invalid parameter: {cp_index}. Please provide a valid value.")
-    isort, esort = sortNeurons(trim_params[:-1])
+    isort, esort = sortNeurons(trim_params)
     
     
     nidel = int(del_frac * NI) * istage
@@ -233,7 +244,7 @@ def trim_neurons(trim_params):
 def trimming(params):
     '''
     -- params has the form 
-        [netfldr, prmflder, netname, idtyp, cp_index, idxprun, istage] 
+        [netname, idtyp, cp_index, idxprun, istage] 
     
     - netfldr: the directory of stored parent networks 
     - prmflder: the directory of stored array of ,currently10 permutations (size=10xN)  
@@ -244,9 +255,8 @@ def trimming(params):
     - istage is the stage of pruning (normally 10 stages where each stage removes 10% of links or nodes from the network). if istage=0, no pruning; istage =1, 10 percent pruning; istage 2 20 percent pruning
     output: a coo matrix (which is sparse matrix) after the desired degneration and resorted so that inh nodes have indices less than exc nodes, for easier access.
     '''  
-    netfldr, prmflder, netname, idtyp, cp_index, idxprun, istage = params
-    
-    trim_params = params[:3]+params[4:]
+    netname, idtyp, cp_index, idxprun, istage = params
+    trim_params = [netname, cp_index, idxprun, istage]
     
     if idtyp:
         return trim_neurons(trim_params)

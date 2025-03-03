@@ -6,8 +6,11 @@ from parameters import *
 
 
 def simulateAndStore(params):
-    # idtyp, cp_index, idxprune, istage, gvalue = params  
-    netfldr, prmflder, netname, idtyp, cp_index, idxprun, istage, gvalue = params
+
+    netname, idtyp, cp_index, idxprun, istage, gvalue = params
+    
+    mfold = mfolds[netname in ['er', 'sw', 'sf']] 
+    spkdir = pfold+mfold+spkfold # output directory
     
     wmtx = trimming(params[:-1])
     newNI = NI-idtyp*int(del_frac*istage*NI)
@@ -45,9 +48,9 @@ def simulateAndStore(params):
     data[:,1] = data[:,1]-ms_recstart
     data[:,0] = data[:,0] - 1 ##### index from 0
     
-    np.savez_compressed('%s/spikeData_%s_%d_%d_%d_%d_%d.npz'%(outdir, netname, idtyp, cp_index, idxprun, istage, int(gvalue)), data=data)
+    # np.savez_compressed('%s/spikeData_%s_%d_%d_%d_%d_%d.npz'%(spkdir, netname, idtyp, cp_index, idxprun, istage, int(gvalue)), data=data)
     
-    return 
+    return data
     
 
 

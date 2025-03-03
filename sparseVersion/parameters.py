@@ -4,8 +4,22 @@ import numpy as np
 NI, NE = [ 680, 2931]
 N0 = NI+NE
 
-indir = '../../nongit/data/pc_data'
-outdir = '../outdata'
+# indir = '../../nongit/data/pc_data'
+# outdir = '../outdata'
+pfold = '../../empsynthData'
+mfolds = ['/empNets', '/synthNets']
+permfold = '/permutations'
+netfold = '/netOrdered'
+spkfold = '/spikeData'
+
+# netnamestring = ['relabeld_and_ordered', 'doubleRelabeled_ordered'] # emp, synth
+all_network_types = ['emp', 'er', 'sw', 'sf']
+all_degeneration_indices = np.arange(2)
+all_network_iterations = np.arange(10)
+all_pruning_indices = np.arange(5)
+all_pruning_stages = np.arange(10)
+all_g_values = [3.,4., 5., 6., 7.]
+
 del_frac = 0.1
 
 nDegen = 2
@@ -35,7 +49,7 @@ J_bg = 5.
 p_rate = 15000.
 delay = 1.5
 
-simulation_time = 11. #11. # in s
+simulation_time = 3. # in s
 start_record_time = 1. # in s
 dt = 0.1 # time resolution in ms
 

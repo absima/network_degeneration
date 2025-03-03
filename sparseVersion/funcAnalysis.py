@@ -35,7 +35,9 @@ def firingRate(iparams):
         np.std(firing_rates[newNI:])
     ]# for population, I population, Epopulation
     
-    return [mean_rates, sd_rates]
+    mnrr = np.mean([mean_rates, sd_rates])
+    
+    return mnrr
 
 
 
@@ -50,6 +52,8 @@ def fanoFactor(iparams, ff_binsize=None):
         - spktime is a spike time array
         output: the fano-factor 
         '''
+        if ff_binsize is None:
+            ff_binsize = 50
         last_spike_time = int(np.ceil(spktime[-1]))
         bins = np.arange(-0.05, last_spike_time + 0.05, ff_binsize)
         psth, _ = np.histogram(spktime, bins)
@@ -62,13 +66,13 @@ def fanoFactor(iparams, ff_binsize=None):
     network_size = newNI + newNE
     node_ids, spike_times = data.T
     
-    if ff_binsize is None:
-        ff_binsize = 50
     ff_all = meanff(spike_times)
     ff_inh = meanff(spike_times[node_ids<newNI])
     ff_exc = meanff(spike_times[node_ids>=newNI])
     
-    return [ff_all, ff_inh, ff_exc]
+    mnff = np.array([ff_all, ff_inh, ff_exc])
+    
+    return mnff
     
     
     
@@ -99,8 +103,8 @@ def cvISI(iparams):
     mean_cv_all = np.nanmean(cv_values)
     mean_cv_inh = np.nanmean(cv_values[:newNI])
     mean_cv_exc = np.nanmean(cv_values[newNI:])
-    
-    return [mean_cv_all, mean_cv_inh, mean_cv_exc]
+    mncv = np.array([mean_cv_all, mean_cv_inh, mean_cv_exc])
+    return mncv
 
 
 def meanDegree(iparams): #<<<--- flag=unweighted to load
@@ -108,7 +112,7 @@ def meanDegree(iparams): #<<<--- flag=unweighted to load
     - data is a list of sparse_data of unweighted adjacency matrix, number of Inhibitory and number of excitatory nodes.
     
     ''' 
-    netdir, prmdir, netname, idtyp, cp_index, idxprun, istage = iparams
+    netname, idtyp, cp_index, idxprun, istage = iparams
     newNI = NI-idtyp*int(del_frac*istage*NI)
     newNE = NE-idtyp*int(del_frac*istage*NE)
     newNN = newNI + newNE
@@ -154,10 +158,12 @@ def meanDegree(iparams): #<<<--- flag=unweighted to load
     mndeg = [mean_degree, mean_in_degree, mean_out_degree]
     sddeg = [std_degree, std_in_degree, std_out_degree]   
 
-    return mndeg, sddeg
+    mndg = np.array([mndeg, sddeg])
+    
+    return mndg
 
 def meanEffectiveLinkWeight(iparams, weight):
-    netdir, prmdir, netname, idtyp, cp_index, idxprun, istage = iparams
+    netname, idtyp, cp_index, idxprun, istage = iparams
     newNI = NI-idtyp*int(del_frac*istage*NI)
     newNE = NE-idtyp*int(del_frac*istage*NE)
     newNN = newNI + newNE
@@ -204,11 +210,13 @@ def meanEffectiveLinkWeight(iparams, weight):
     mnwgt = [mean_weight, mean_in_weight, mean_out_weight]
     sdwgt = [std_weight, std_in_weight, std_out_weight]
     
-    return [mnwgt, sdwgt]
+    mnesw = np.array([mnwgt, sdwgt])
+    
+    return mnesw
 
 
 def contributionToPairwiseSharing(iparams):
-    netdir, prmdir, netname, idtyp, cp_index, idxprun, istage = iparams
+    netname, idtyp, cp_index, idxprun, istage = iparams
     newNI = NI-idtyp*int(del_frac*istage*NI)
     newNE = NE-idtyp*int(del_frac*istage*NE)
     newNN = newNI + newNE
@@ -225,28 +233,30 @@ def contributionToPairwiseSharing(iparams):
     mean_shared_I = np.mean(shared_by_I)/newNN
     mean_shared_E = np.mean(shared_by_E)/newNN
     
-    mean_shared_list = [mean_shared, mean_shared_I, mean_shared_E]
+    msh = np.array([mean_shared, mean_shared_I, mean_shared_E])
     
-    return mean_shared_list
+    return mnsh
     
 def symmetricity(data):
     return     
-    
-simulation_time = 11. # in s
-start_record_time = 1. # in s
+  
+def strPart(sparams, weight=None):
+    dg = meanDegree(sparams)
+    if weight is None:
+        weight = np.array([-2.5, -2.5,  0.5,  0.5])
+    esw = meanEffectiveLinkWeight(sparams, weight)
+    sh = contributionToPairwiseSharing(sparams)
+    return np.row_stack((dg, esw, sh))
 
+def dynPart(dparams):
+    rr = firingRate(dparams)
+    ff = fanoFactor(dparams)
+    cv = cvISI(dparams)
+    return np.row_stack((rr, ff, cv))
 
-### demo: 
-pfold = '../../empsynthData'
-mfolds = ['/empNets', '/synthNets']
-permfold = '/permutations'
-netfold = '/netOrdered'
-spkfold = '/spikeData'
+      
 
 netname = 'emp'
-mfold = mfolds[netname in ['er', 'sw', 'sf']] 
-spkdir = pfold+mfold+spkfold
-
 idtyp = 0
 cp_index = 0
 idxprun = 2
@@ -255,17 +265,23 @@ g = 5.
 
 
 # ############ dyn
-# dparams = [spkdir, netname, idtyp, cp_index, idxprun, istage, g]
+dparams = [netname, idtyp, cp_index, idxprun, istage, g]
+
+# # rfc = dynPart(dparams)
 # rr = firingRate(dparams)
 # ff = fanoFactor(dparams)
 # cv = cvISI(dparams)
+
+spkdt, newNI, newNE = loadSpikeData(dparams)
 
 # ############ str
 # netdir = pfold+mfold+netfold
 # prmdir = pfold+mfold+permfold
 # sparams = netdir, prmdir, netname, idtyp, cp_index, idxprun, istage
-# dg = meanDegree(sparams)
 # weight = np.array([-2.5, -2.5,  0.5,  0.5])
+# des = strPart(sparams, weight=weight)
+
+# dg = meanDegree(sparams)
 # esw = meanEffectiveLinkWeight(sparams, weight)
 # sh = contributionToPairwiseSharing(sparams)
 
