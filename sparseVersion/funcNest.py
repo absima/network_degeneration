@@ -48,9 +48,9 @@ def simulateAndStore(params):
     data[:,1] = data[:,1]-ms_recstart
     data[:,0] = data[:,0] - 1 ##### index from 0
     
-    # np.savez_compressed('%s/spikeData_%s_%d_%d_%d_%d_%d.npz'%(spkdir, netname, idtyp, cp_index, idxprun, istage, int(gvalue)), data=data)
+    np.savez_compressed('%s/spikeData_%s_%d_%d_%d_%d_%d.npz'%(spkdir, netname, idtyp, cp_index, idxprun, istage, int(gvalue)), data=data)
     
-    return data
+    return
     
 
 
