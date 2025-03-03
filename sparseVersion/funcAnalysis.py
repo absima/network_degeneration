@@ -35,7 +35,7 @@ def firingRate(iparams):
         np.std(firing_rates[newNI:])
     ]# for population, I population, Epopulation
     
-    mnrr = np.mean([mean_rates, sd_rates])
+    mnrr = np.array([mean_rates, sd_rates])
     
     return mnrr
 
@@ -52,16 +52,16 @@ def fanoFactor(iparams, ff_binsize=None):
         - spktime is a spike time array
         output: the fano-factor 
         '''
-        if ff_binsize is None:
-            ff_binsize = 50
         last_spike_time = int(np.ceil(spktime[-1]))
         bins = np.arange(-0.05, last_spike_time + 0.05, ff_binsize)
         psth, _ = np.histogram(spktime, bins)
         mean_psth = np.mean(psth)
         return int(mean_psth != 0) * np.var(psth) / mean_psth
         
+    if ff_binsize is None:
+        ff_binsize = 50
+        
     data = loadSpikeData(iparams)
-    
     data, newNI, newNE = data
     network_size = newNI + newNE
     node_ids, spike_times = data.T
@@ -154,11 +154,14 @@ def meanDegree(iparams): #<<<--- flag=unweighted to load
     std_degree = [std_sum_degrees, std_sum_degrees_I, std_sum_degrees_E]
     std_in_degree = [std_in_degrees, std_in_degrees_I, std_in_degrees_E]
     std_out_degree = [std_out_degrees, std_out_degrees_I, std_out_degrees_E]
-    
-    mndeg = [mean_degree, mean_in_degree, mean_out_degree]
-    sddeg = [std_degree, std_in_degree, std_out_degree]   
-
-    mndg = np.array([mndeg, sddeg])
+      
+    mndg = np.array([
+        mean_degree, 
+        mean_in_degree, 
+        mean_out_degree, 
+        std_degree, 
+        std_in_degree, 
+        std_out_degree])
     
     return mndg
 
@@ -210,7 +213,13 @@ def meanEffectiveLinkWeight(iparams, weight):
     mnwgt = [mean_weight, mean_in_weight, mean_out_weight]
     sdwgt = [std_weight, std_in_weight, std_out_weight]
     
-    mnesw = np.array([mnwgt, sdwgt])
+    mnesw = np.array([
+        mean_weight, 
+        mean_in_weight, 
+        mean_out_weight, 
+        std_weight, 
+        std_in_weight, 
+        std_out_weight])
     
     return mnesw
 
@@ -233,7 +242,7 @@ def contributionToPairwiseSharing(iparams):
     mean_shared_I = np.mean(shared_by_I)/newNN
     mean_shared_E = np.mean(shared_by_E)/newNN
     
-    msh = np.array([mean_shared, mean_shared_I, mean_shared_E])
+    mnsh = np.array([mean_shared, mean_shared_I, mean_shared_E])
     
     return mnsh
     
@@ -254,35 +263,6 @@ def dynPart(dparams):
     cv = cvISI(dparams)
     return np.row_stack((rr, ff, cv))
 
-      
-
-netname = 'emp'
-idtyp = 0
-cp_index = 0
-idxprun = 2
-istage = 5
-g = 5.
-
-
-# ############ dyn
-dparams = [netname, idtyp, cp_index, idxprun, istage, g]
-
-# # rfc = dynPart(dparams)
-# rr = firingRate(dparams)
-# ff = fanoFactor(dparams)
-# cv = cvISI(dparams)
-
-spkdt, newNI, newNE = loadSpikeData(dparams)
-
-# ############ str
-# netdir = pfold+mfold+netfold
-# prmdir = pfold+mfold+permfold
-# sparams = netdir, prmdir, netname, idtyp, cp_index, idxprun, istage
-# weight = np.array([-2.5, -2.5,  0.5,  0.5])
-# des = strPart(sparams, weight=weight)
-
-# dg = meanDegree(sparams)
-# esw = meanEffectiveLinkWeight(sparams, weight)
-# sh = contributionToPairwiseSharing(sparams)
+     
 
 

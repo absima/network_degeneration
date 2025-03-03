@@ -9,42 +9,45 @@ from parameters import *
 This is sort of verifying the overall steps, preSimulation(mainly trimming), simulation and postSimulation. The trimming algorithms (syn + neuro) and weight assignment to the binary nets are verified. While in synaptic pruning, the nodes retain their original labels, in nodal pruning, I block and E block are relabled separately but retain the same structure as the original in that I block have smaller indices (ordered first in the matrix) than the E blocks. In the end we inspect the spike data.  
 '''
 
-def plotmat(ax, mtx, icol, irow, colname=None, rowname=None):
-    ''' 
-    to plot a matrix plot on (irow,icol) position
-    '''
-    ax.matshow(mtx, cmap=cmap, norm=norm)
-    ax.set_aspect('auto')
-    
-    ax.locator_params(axis='x', nbins=4)
-    ax.locator_params(axis='y', nbins=4)
-    if icol:
-        ax.set_yticklabels([])
-    if not icol:
-        ax.set_ylabel('Node ID', fontsize=10, fontweight='bold')
-    if irow==0:
-        ax.set_title(colname, fontsize=12, fontweight='bold')
-    if irow==3:
-        ax.xaxis.set_ticks_position('bottom')
-        ax.set_xlabel('Node ID', color ='white', fontsize=10, fontweight='bold')
-        ax.set_xticklabels(ax.get_xticklabels(), color='white', rotation=45)
-    else:
-        ax.set_xticklabels([])
-    
-    # if not icol:
-    #     ax.text(-(1.2)*len(mtx), len(mtx)/2, rowname, fontsize=12, fontweight='bold')
-    if icol==3:
-        ax.text((1.1)*len(mtx), len(mtx)/2, rowname, fontsize=12, fontweight='bold')
-    return 
-    
-    
 
 np.random.seed(4866867)
 
    
 # ################## -1- ##################
+
+
 # ########## 1. preSimulation ##########
 # #### loading the relabeled and perm and restoring the actual ... followed by trimming
+#
+# def plotmat(ax, mtx, icol, irow, colname=None, rowname=None):
+#     '''
+#     to plot a matrix plot on (irow,icol) position
+#     '''
+#     ax.matshow(mtx, cmap=cmap, norm=norm)
+#     ax.set_aspect('auto')
+#
+#     ax.locator_params(axis='x', nbins=4)
+#     ax.locator_params(axis='y', nbins=4)
+#     if icol:
+#         ax.set_yticklabels([])
+#     if not icol:
+#         ax.set_ylabel('Node ID', fontsize=10, fontweight='bold')
+#     if irow==0:
+#         ax.set_title(colname, fontsize=12, fontweight='bold')
+#     if irow==3:
+#         ax.xaxis.set_ticks_position('bottom')
+#         ax.set_xlabel('Node ID', color ='white', fontsize=10, fontweight='bold')
+#         ax.set_xticklabels(ax.get_xticklabels(), color='white', rotation=45)
+#     else:
+#         ax.set_xticklabels([])
+#
+#     # if not icol:
+#     #     ax.text(-(1.2)*len(mtx), len(mtx)/2, rowname, fontsize=12, fontweight='bold')
+#     if icol==3:
+#         ax.text((1.1)*len(mtx), len(mtx)/2, rowname, fontsize=12, fontweight='bold')
+#     return
+#    
+#
 # index = 0 # net variant
 # istage = 5 # 5 is for 5*10 percent of the original to delete
 # wgt_array = [-600, -606, 302, 203]
@@ -111,22 +114,24 @@ np.random.seed(4866867)
 #
 # # plt.savefig('demoFigs/orig_relabeled_synprun_neuroprun')
 # # plt.savefig('demoFigs/orig_relabeled_synprun_neuroprun.pdf')
-#
-#
-#
-#
-#
-#
+
+
+
 # ################## -2- ##################
-# # ########## 2. simulation ##########
-# # ############## 2.1. simulator part ###############
-# # ####checking the simulator with a single set of params
-# # netname, idtyp, cp_index, idxprun, istage, gvalue = ['er', 0, 0, 2, 5, 7.]
-# # spkparams = [netname, idtyp, cp_index, idxprun, istage, gvalue]
-# # simulateAndStore(spkparams)
-#
-#
+
+
+# ########## 2. simulation ##########
+# ############## 2.1. simulator part ###############
+
+# ####checking the simulator with a single set of params
+# from funcNest import simulateAndStore
+# netname, idtyp, cp_index, idxprun, istage, gvalue = ['er', 0, 0, 2, 5, 7.]
+# spkparams = [netname, idtyp, cp_index, idxprun, istage, gvalue]
+# simulateAndStore(spkparams)
+
+
 # ############## 2.2. parallel tasking part ###############
+
 # #### checking the parallel processing algo with multiple sets of params
 # import time, itertools
 # from multiprocessing import Pool, cpu_count
@@ -166,8 +171,11 @@ np.random.seed(4866867)
 
 
 # # ################# -3- ##################
+
+
 # # ########## 3. postSimulation ##########
 # # ############## 3.1. raster ###############
+
 # colnames = ['empirical-3611', 'erdos-renyii', 'small-world', 'scale-free']
 # rownames = ['parent', 'synPrun', 'neuroPrun']
 # cpstages = [0, 5, 5]
@@ -220,4 +228,38 @@ np.random.seed(4866867)
 # # plt.tight_layout()
 # plt.show()
 #
-# # ############## 3.2. Analysis ###############
+# # # ############## 3.2. Analysis ###############
+
+# #### 3.2.1. functional quantities - ###
+# from funcAnalysis import *
+# netname, idtyp, cp_index, idxprun, istage, gvalue = ['er', 0, 0, 2, 5, 7.]
+# spkparams = [netname, idtyp, cp_index, idxprun, istage, gvalue]
+# # spkdt, newNI, newNE = loadSpikeData(spkparams)
+# rr = firingRate(spkparams)
+# ff = fanoFactor(spkparams)
+# cv = cvISI(spkparams)
+#
+# for netname in all_network_types:
+#     spkparams[0] = netname
+#     rfc = dynPart(spkparams)
+#     print(netname)
+#     print(rfc)
+#     print('')
+
+
+# #### 3.2.2. structural quantities - ###
+from funcAnalysis import *
+sparams = ['er', 0, 0, 2, 5] #netname, idtyp, cp_index, idxprun, istage
+weight = np.array([-2.5, -2.5,  0.5,  0.5])
+#
+dg = meanDegree(sparams)
+esw = meanEffectiveLinkWeight(sparams, weight)
+sh = contributionToPairwiseSharing(sparams)
+
+for netname in all_network_types:
+    sparams[0] = netname
+    des = strPart(sparams)
+    print(netname)
+    print(des)
+    print('')
+
