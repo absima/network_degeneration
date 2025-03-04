@@ -4,21 +4,23 @@ import numpy as np
 NI, NE = [ 680, 2931]
 N0 = NI+NE
 
-# indir = '../../nongit/data/pc_data'
-# outdir = '../outdata'
-pfold = '../../empsynthData'
+# data directories
+pfold = '/mnt/sdb/sima/data/nester'
+pfold = '/Users/sima/netProject/nestStuff/degenProject/empsynthData'
 mfolds = ['/empNets', '/synthNets']
-permfold = '/permutations'
-netfold = '/netOrdered'
-spkfold = '/spikeData'
+permfold = '/permutations' # for permuters
+netfold = '/netOrdered' # for networks
+spkfold = '/spikeData' # for spikes
+qntfold = '/qntData' # for estimated quantities
 
 # netnamestring = ['relabeld_and_ordered', 'doubleRelabeled_ordered'] # emp, synth
 all_network_types = ['emp', 'er', 'sw', 'sf']
-all_degeneration_indices = np.arange(2)
-all_network_iterations = np.arange(10)
-all_pruning_indices = np.arange(5)
-all_pruning_stages = np.arange(10)
+all_degeneration_indices = list(range(2))
+all_network_iterations = list(range(10))
+all_pruning_indices = list(range(5))
+all_pruning_stages = list(range(10))
 all_g_values = [3.,4., 5., 6., 7.]
+
 
 del_frac = 0.1
 
@@ -27,24 +29,18 @@ nIndex = 10
 nPrune = 5
 nStage = 10
 degeneration_indices = np.arange(nDegen) # 0 for link removal and 1 for node removal
-network_indices = np.arange(nIndex) # indices to load the desired network
-pruning_indices = np.arange(nPrune) # indices for one of the five strategies from the two schemes
+network_indices = np.arange(nIndex) # indices to load the desired network from a category
+pruning_indices = np.arange(nPrune) # indices for one of the five strategies per scheme
 gvalues = np.array([3.,4.,5.,6.,7.]) #the relative strength of inhibition: wINH = -g*wEXC
 
 
 #parent nets are simulated and alyzed separately to avoid repeated iterations. 
 parents = [0] # parent stage -- preDegeneration
 children = np.arange(1,nStage) # stages of degeneration
-samples = [8,9]# some samples to check 
 
 
 ### starter simulation parameters  
-g_default = 5.
 mije = .5
-wii = -g_default*mije
-wie = -g_default*mije
-wei = mije
-wee = mije
 J_bg = 5.
 p_rate = 15000.
 delay = 1.5

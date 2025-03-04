@@ -1,6 +1,6 @@
 import numpy as np
 
-from funcDegeneration import loadSpikeData, trimming, weightedFromAdjacency
+from funcDegeneration import *
 from parameters import *
 
 
@@ -262,6 +262,23 @@ def dynPart(dparams):
     ff = fanoFactor(dparams)
     cv = cvISI(dparams)
     return np.row_stack((rr, ff, cv))
+    
+def dynStrPart(dsparams, weight=None):
+    print(dsparams)
+    dpart = dynPart(dsparams)
+    spart = strPart(dsparams[:-1])
+    dscat = np.row_stack((dpart, spart))
+    
+    mfold = mfolds[dsparams[0] in ['er', 'sw', 'sf']] 
+    qfold = pfold+mfold+qntfold
+    
+    strng = tuple([qfold]+list(dsparams[:-1])+[int(dsparams[-1])])
+    
+    np.savetxt('%s/dynstr_%s%d%d%d%d%d.txt'%strng, dscat)
+    return 
+    
+    
+    
 
      
 

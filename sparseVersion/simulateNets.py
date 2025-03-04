@@ -8,7 +8,7 @@ from funcNest import *
 from parameters import *
 
 
-
+networks = all_network_types[:1]
 ## parent stage -- preDegeneration
 parent_stage = all_pruning_stages[:1]
 ## stages of degeneration
@@ -22,7 +22,7 @@ if __name__ == '__main__':
         # pruning_stages = [parent_stage, degenerate_stage][i]
         pruning_indices = [[0], all_pruning_indices][ips]
         paramList = list(itertools.product(
-            all_network_types,
+            networks,
             all_degeneration_indices,
             all_network_iterations,
             pruning_indices,
